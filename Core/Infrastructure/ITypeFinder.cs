@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace Core.Infrastructure
 {
     /// <summary>
-    /// 查找对饮的类型
+    /// 查找对应的类型
     /// </summary>
     public interface ITypeFinder
     {
