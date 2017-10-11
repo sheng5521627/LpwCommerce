@@ -80,6 +80,7 @@
     <Compile Include="Configuration\ISettings.cs" />
     <Compile Include="Configuration\NopConfig.cs" />
     <Compile Include="Infrastructure\IEngine.cs" />
+    <Compile Include="Infrastructure\ITypeFinder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
