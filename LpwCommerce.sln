@@ -3,8 +3,25 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libraries", "Libraries", "{06E9CF31-0DB5-4A36-B123-783687A15F37}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core", "Core\Core.csproj", "{DC4A2CDF-5713-4B0E-8352-B36BBDF75A8B}"
+EndProject
 Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DC4A2CDF-5713-4B0E-8352-B36BBDF75A8B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DC4A2CDF-5713-4B0E-8352-B36BBDF75A8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DC4A2CDF-5713-4B0E-8352-B36BBDF75A8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DC4A2CDF-5713-4B0E-8352-B36BBDF75A8B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{DC4A2CDF-5713-4B0E-8352-B36BBDF75A8B} = {06E9CF31-0DB5-4A36-B123-783687A15F37}
 	EndGlobalSection
 EndGlobal
