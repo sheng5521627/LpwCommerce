@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Core.Configuration;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
@@ -8,6 +9,11 @@ namespace WebTest.Controllers
 {
     public class HomeController : Controller
     {
+        public HomeController(NopConfig config)
+        {
+
+        }
+
         public ActionResult Index()
         {
             return View();

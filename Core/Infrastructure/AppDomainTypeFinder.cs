@@ -18,7 +18,7 @@ namespace Core.Infrastructure
         private bool loadAppDomainAssemblies = true;
         private string assemblySkipLoadingPattern = "^System|^mscorlib|^Microsoft|^AjaxControlToolkit|^Antlr3|^Autofac|^AutoMapper|^Castle|^ComponentArt|^CppCodeProvider|^DotNetOpenAuth|^EntityFramework|^EPPlus|^FluentValidation|^ImageResizer|^itextsharp|^log4net|^MaxMind|^MbUnit|^MiniProfiler|^Mono.Math|^MvcContrib|^Newtonsoft|^NHibernate|^nunit|^Org.Mentalis|^PerlRegex|^QuickGraph|^Recaptcha|^Remotion|^RestSharp|^Rhino|^Telerik|^Iesi|^TestDriven|^TestFu|^UserAgentStringLibrary|^VJSharpCodeProvider|^WebActivator|^WebDev|^WebGrease";
         private string assemblyRestrictToLoadingPattern = ".*";
-        private IList<string> assemlyNames = new List<string>();
+        private IList<string> assemblyNames = new List<string>();
 
         #endregion
 
@@ -30,10 +30,10 @@ namespace Core.Infrastructure
             set { loadAppDomainAssemblies = value; }
         }
 
-        public IList<string> AssemlyNames
+        public IList<string> AssemblyNames
         {
-            get { return assemlyNames; }
-            set { assemlyNames = value; }
+            get { return assemblyNames; }
+            set { assemblyNames = value; }
         }
 
         public string AssemblySkipLoadingPattern
@@ -45,7 +45,7 @@ namespace Core.Infrastructure
         public string AssemblyRestrictToLoadingPattern
         {
             get { return assemblyRestrictToLoadingPattern; }
-            set { assemblyRestrictToLoadingPattern = value; }    
+            set { assemblyRestrictToLoadingPattern = value; }
         }
 
         public IEnumerable<Type> FindClassesOfType<T>(bool onlyConcreteClasses = true)
@@ -63,14 +63,112 @@ namespace Core.Infrastructure
             return FindClassesOfType(typeof(T), assemblies, onlyConcreteClasses);
         }
 
+        /// <summary>
+        /// 查找给定类型的所有实现
+        /// </summary>
+        /// <param name="assignTypeFrom"></param>
+        /// <param name="assemblies"></param>
+        /// <param name="onlyConcreteClasses"></param>
+        /// <returns></returns>
         public IEnumerable<Type> FindClassesOfType(Type assignTypeFrom, IEnumerable<Assembly> assemblies, bool onlyConcreteClasses = true)
         {
-            throw new NotImplementedException();
+            var result = new List<Type>();
+            try
+            {
+                foreach (var assembly in assemblies)
+                {
+                    Type[] types = null;
+                    try
+                    {
+                        types = assembly.GetTypes();
+                    }
+                    catch (Exception)
+                    {
+                        if (!ignoreReflectionErrors)
+                        {
+                            throw;
+                        }
+                    }
+                    if (types != null)
+                    {
+                        foreach(var type in types)
+                        {
+                            if(assignTypeFrom.IsAssignableFrom(type) || (assignTypeFrom.IsGenericTypeDefinition && DoesTypeImplementOpenGeneric(type, assignTypeFrom)))
+                            {
+                                if (!type.IsInterface)
+                                {
+                                    if (onlyConcreteClasses)
+                                    {
+                                        if(type.IsClass && !type.IsAbstract)
+                                        {
+                                            result.Add(type);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        result.Add(type);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                var msg = string.Empty;
+                foreach(var e in ex.LoaderExceptions)
+                {
+                    msg += e.Message + Environment.NewLine;
+                }
+                var fail = new Exception(msg, ex);
+                Debug.WriteLine(fail.Message, fail);
+                throw fail;
+            }
+            return result;
         }
 
-        public IList<Assembly> GetAssemblies()
+        /// <summary>
+        /// 判断类型是否实现给定的泛型
+        /// </summary>
+        /// <param name="type"></param>
+        /// <param name="openGeneric"></param>
+        /// <returns></returns>
+        protected virtual bool DoesTypeImplementOpenGeneric(Type type, Type openGeneric)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var genericTypeDefinition = openGeneric.GetGenericTypeDefinition();
+                foreach (var implementedInterface in type.FindInterfaces((objType, objCriteria) => true, null))
+                {
+                    if (!implementedInterface.IsGenericType)
+                        continue;
+
+                    var isMatch = genericTypeDefinition.IsAssignableFrom(implementedInterface.GetGenericTypeDefinition());
+                    return isMatch;
+                }
+                return false;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 获取系统中的程序集
+        /// </summary>
+        /// <returns></returns>
+        public virtual IList<Assembly> GetAssemblies()
+        {
+            var addAssemblyNames = new List<string>();
+            var assemblies = new List<Assembly>();
+
+            if (LoadAppDomainAssemblies)
+                AddAssembliesInAppDomain(addAssemblyNames, assemblies);
+            AddConfiguredAssemblies(addAssemblyNames, assemblies);
+
+            return assemblies;
         }
 
         /// <summary>
@@ -80,7 +178,35 @@ namespace Core.Infrastructure
         /// <param name="assemblies"></param>
         private void AddAssembliesInAppDomain(List<string> addAssemblyNames, List<Assembly> assemblies)
         {
-            
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (Matches(assembly.FullName))
+                {
+                    if (!addAssemblyNames.Contains(assembly.FullName))
+                    {
+                        assemblies.Add(assembly);
+                        addAssemblyNames.Add(assembly.FullName);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 添加给定的程序集
+        /// </summary>
+        /// <param name="assemblyNames"></param>
+        /// <param name="assemblies"></param>
+        protected virtual void AddConfiguredAssemblies(List<string> assemblyNames, List<Assembly> assemblies)
+        {
+            foreach (string assemblyName in AssemblyNames)
+            {
+                Assembly assembly = Assembly.Load(assemblyName);
+                if (!assemblyNames.Contains(assembly.FullName))
+                {
+                    assemblies.Add(assembly);
+                    assemblyNames.Add(assembly.FullName);
+                }
+            }
         }
 
         /// <summary>
@@ -137,6 +263,6 @@ namespace Core.Infrastructure
                     Trace.TraceError(e.ToString());
                 }
             }
-        }
+        }        
     }
 }
