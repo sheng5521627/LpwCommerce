@@ -93,6 +93,11 @@ namespace Core.Plugins
             this.PluginType = pluginType;
         }
 
+        /// <summary>
+        /// 获取插件实例
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
         public virtual T Instance<T>() where T : class, IPlugin
         {
             object instance;

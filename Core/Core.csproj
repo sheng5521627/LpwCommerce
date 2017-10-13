@@ -78,8 +78,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CommonHelper.cs" />
+    <Compile Include="ComponentModel\GenericListTypeConverter.cs" />
+    <Compile Include="ComponentModel\WriteLockDisposable.cs" />
     <Compile Include="Configuration\ISettings.cs" />
     <Compile Include="Configuration\NopConfig.cs" />
+    <Compile Include="Domain\Shipping\ShippingOption.cs" />
     <Compile Include="Infrastructure\AppDomainTypeFinder.cs" />
     <Compile Include="Infrastructure\DependencyManagement\ContainerManager.cs" />
     <Compile Include="Infrastructure\DependencyManagement\IDependencyRegistrar.cs" />
@@ -90,8 +94,13 @@
     <Compile Include="Infrastructure\Singleton.cs" />
     <Compile Include="Infrastructure\WebAppTypeFinder.cs" />
     <Compile Include="NopException.cs" />
+    <Compile Include="NopVersion.cs" />
     <Compile Include="Plugins\IPlugin.cs" />
+    <Compile Include="Plugins\IPluginFinder.cs" />
+    <Compile Include="Plugins\LoadPluginsMode.cs" />
     <Compile Include="Plugins\PluginDescriptor.cs" />
+    <Compile Include="Plugins\PluginFileParser.cs" />
+    <Compile Include="Plugins\PluginManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

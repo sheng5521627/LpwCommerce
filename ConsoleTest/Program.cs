@@ -1,12 +1,15 @@
-﻿using Core.Configuration;
+﻿using Core;
+using Core.Configuration;
 using Core.Infrastructure;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Globalization;
 
 namespace ConsoleTest
 {
@@ -14,28 +17,45 @@ namespace ConsoleTest
     {
         static void Main(string[] args)
         {
-            EngineContext.Initialize(false);
+            var a = TypeDescriptor.GetConverter(typeof(MyConverter));
+            
 
-            bool flag = EngineContext.Current.ContainnerManager.IsRegistered<IPerson>();
-
-            var o = EngineContext.Current.ResolveAll<IPerson>();
-
-            foreach(var item in o)
-            {
-                Console.WriteLine(item);
-            }
-
+            Console.Write(a);
             Console.ReadLine();
         }
     }
 
-    public class A
+    public class MyConverter : TypeConverter
     {
-        public string Name { get; set; }
+        public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
+        {
+            return true;
+        }
+
+        public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
+        {
+            if (value is string)
+            {
+                return new Animal() { Name = (string)value };
+            }
+
+            return base.ConvertFrom(context, culture, value);
+        }
+
+        public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
+        {
+            if (destinationType == typeof(string))
+            {
+                return ((Animal)value).Name;
+            }
+
+            return base.ConvertTo(context, culture, value, destinationType);
+        }
     }
 
-    public class B
+    [TypeConverter(typeof(MyConverter))]
+    public class Animal
     {
-
+        public string Name { get; set; }
     }
 }
