@@ -1,4 +1,7 @@
-﻿using Core.Configuration;
+﻿using Core.Caching;
+using Core.Configuration;
+using Core.Infrastructure;
+using Core.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,11 +14,18 @@ namespace WebTest.Controllers
     {
         public HomeController(NopConfig config)
         {
-
+            
         }
 
         public ActionResult Index()
         {
+            NopConfig config = EngineContext.Current.Resolve<NopConfig>();
+            RedisCacheManager cache = new RedisCacheManager(config);
+            cache.Set("name", "lpw", 1);
+
+            string name = cache.Get<string>("name");
+
+
             return View();
         }
 

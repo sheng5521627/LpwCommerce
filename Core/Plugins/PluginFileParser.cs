@@ -79,7 +79,7 @@ namespace Core.Plugins
 
             foreach (var setting in settings)
             {
-                var separatorIndex = settings.IndexOf(":");
+                var separatorIndex = setting.IndexOf(":");
                 if (separatorIndex == -1)
                     continue;
 

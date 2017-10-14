@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 
@@ -67,7 +68,7 @@ namespace Core
         /// <param name="maxLength"></param>
         /// <param name="postfix"></param>
         /// <returns></returns>
-        public static string EnsureMaximumLength(string str,int maxLength,string postfix = null)
+        public static string EnsureMaximumLength(string str, int maxLength, string postfix = null)
         {
             if (string.IsNullOrEmpty(str))
                 return str;
@@ -94,7 +95,7 @@ namespace Core
         {
             var random = new Random();
             string str = string.Empty;
-            for(int i = 0; i < length; i++)
+            for (int i = 0; i < length; i++)
             {
                 str = string.Concat(str, random.Next(10).ToString());
             }
@@ -124,7 +125,7 @@ namespace Core
             if (string.IsNullOrEmpty(str))
                 return string.Empty;
             var result = new StringBuilder();
-            foreach(char c in str)
+            foreach (char c in str)
             {
                 if (char.IsDigit(c))
                     result.Append(c);
@@ -140,7 +141,7 @@ namespace Core
         public static bool AreNullOrEmpty(params string[] stringsToVolidate)
         {
             bool result = false;
-            Array.ForEach(stringsToVolidate, str => 
+            Array.ForEach(stringsToVolidate, str =>
             {
                 if (string.IsNullOrEmpty(str))
                     result = true;
@@ -164,7 +165,7 @@ namespace Core
             if (a1.Length != a2.Length)
                 return false;
             var comparer = EqualityComparer<T>.Default;
-            for(int i = 0; i < a1.Length; i++)
+            for (int i = 0; i < a1.Length; i++)
             {
                 if (!comparer.Equals(a1[i], a2[i]))
                     return false;
@@ -212,7 +213,7 @@ namespace Core
         /// <param name="instance"></param>
         /// <param name="propertyName"></param>
         /// <param name="value"></param>
-        public static void SetProperty(object instance,string propertyName,object value)
+        public static void SetProperty(object instance, string propertyName, object value)
         {
             if (instance == null)
                 throw new ArgumentException("instance");
@@ -229,19 +230,51 @@ namespace Core
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static T To<T>(object value)
+        {
+            return (T)To(value, typeof(T));
+        }
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="destinationType"></param>
+        /// <returns></returns>
+        public static object To(object value,Type destinationType)
+        {
+            return To(value, destinationType, CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
         /// 将值转换成给定的类型
         /// </summary>
         /// <param name="value"></param>
         /// <param name="destinationType"></param>
         /// <param name="cultureInfo"></param>
         /// <returns></returns>
-        public static object To(object value,Type destinationType,CultureInfo cultureInfo)
+        public static object To(object value, Type destinationType, CultureInfo cultureInfo)
         {
-            if(value != null)
+            if (value != null)
             {
                 var sourceType = value.GetType();
-
-
+                TypeConverter destinationTypeConverter = GetNopCustomTypeConverter(destinationType);
+                TypeConverter sourceTypeConverter = GetNopCustomTypeConverter(sourceType);
+                if (destinationType != null && destinationTypeConverter.CanConvertFrom(sourceType))
+                    return destinationTypeConverter.ConvertFrom(null, cultureInfo, value);
+                if (sourceTypeConverter != null && sourceTypeConverter.CanConvertTo(null, destinationType))
+                    return sourceTypeConverter.ConvertTo(null, cultureInfo, value, destinationType);
+                if (destinationType.IsEnum && value is int)
+                {
+                    return Enum.ToObject(destinationType, (int)value);
+                }
+                if (!destinationType.IsInstanceOfType(sourceType))
+                    return Convert.ChangeType(value, destinationType, cultureInfo);
             }
             return value;
         }
@@ -265,6 +298,50 @@ namespace Core
                 return new ShippingOptionListTypeConverter();
 
             return TypeDescriptor.GetConverter(type);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="str"></param>
+        /// <returns></returns>
+        public static string ConvertEnum(string str)
+        {
+            string result = string.Empty;
+            char[] letters = result.ToCharArray();
+
+            foreach (char c in letters)
+            {
+                if (c.ToString() != c.ToString().ToLower())
+                    result += " " + c.ToString();
+                else
+                    result += c.ToString();
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public static void SetTelerikCulture()
+        {
+            var culture = new CultureInfo("en-US");
+            Thread.CurrentThread.CurrentCulture = culture;
+            Thread.CurrentThread.CurrentUICulture = culture;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="startDate"></param>
+        /// <param name="endDate"></param>
+        /// <returns></returns>
+        public static int GetDifferenceInYears(DateTime startDate, DateTime endDate)
+        {
+            int age = endDate.Year - startDate.Year;
+            if (startDate > endDate.AddYears(-age))
+                age--;
+            return age;
         }
     }
 }

@@ -10,6 +10,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Globalization;
+using Core.Caching;
+using System.Threading;
 
 namespace ConsoleTest
 {
@@ -17,10 +19,6 @@ namespace ConsoleTest
     {
         static void Main(string[] args)
         {
-            var a = TypeDescriptor.GetConverter(typeof(MyConverter));
-            
-
-            Console.Write(a);
             Console.ReadLine();
         }
     }

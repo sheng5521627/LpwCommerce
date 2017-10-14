@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using System.Web.Compilation;
 using System.Web.Hosting;
 
 [assembly: PreApplicationStartMethod(typeof(PluginManager), "Initialize")]
@@ -60,6 +61,9 @@ namespace Core.Plugins
         /// </summary>
         public static IEnumerable<string> IncompatiblePlugins { get; set; }
 
+        /// <summary>
+        /// 应用程序启动前先执行该代码
+        /// </summary>
         public static void Initialize()
         {
             using (new WriteLockDisposable(Locker))
@@ -119,28 +123,150 @@ namespace Core.Plugins
                             if (descriptionFile.Directory == null)
                                 throw new NopException("该目录不能被解析.");
                             //get list of all DLLs in plugins (not in bin!)
-                            var pluginFiles = descriptionFile.Directory.GetFiles(".dll", SearchOption.AllDirectories)
+                            var pluginFiles = descriptionFile.Directory.GetFiles("*.dll", SearchOption.AllDirectories)
                                 .Where(x => !binFiles.Select(q => q.FullName).Contains(x.FullName))
                                 .Where(x => IsPackagePluginFoler(x.Directory));
 
                             var mainPluginFile = pluginFiles.FirstOrDefault(x => x.Name.Equals(pluginDescriptor.PluginFileName, StringComparison.InvariantCultureIgnoreCase));
                             pluginDescriptor.OriginalAssemblyFile = mainPluginFile;
 
-                            
+                            //加载主dll
+                            pluginDescriptor.RefrencedAssembly = PerformFileDeploy(mainPluginFile);
+
+                            //加载所有dll
+                            foreach (var plugin in pluginFiles
+                                .Where(x => !x.Name.Equals(pluginDescriptor.PluginFileName, StringComparison.InvariantCultureIgnoreCase))
+                                .Where(x => !IsAlreadyLoaded(x)))
+                            {
+                                PerformFileDeploy(plugin);
+                            }
+
+                            //初始化插件类型(一个程序集只有一个Plugin)
+                            foreach (var type in pluginDescriptor.RefrencedAssembly.GetTypes())
+                            {
+                                if (typeof(IPlugin).IsAssignableFrom(type))
+                                {
+                                    if (!type.IsInterface && type.IsClass && !type.IsAbstract)
+                                    {
+                                        pluginDescriptor.PluginType = type;
+                                        break;
+                                    }
+                                }
+                            }
+                            referencedPlugins.Add(pluginDescriptor);
                         }
-                        catch (Exception)
+                        catch (ReflectionTypeLoadException ex)
                         {
-
-                            throw;
+                            var msg = string.Format("Plugin '{0}'", pluginDescriptor.FriendlyName);
+                            foreach (var e in ex.LoaderExceptions)
+                                msg += e.Message + Environment.NewLine;
+                            var fail = new Exception(msg, ex);
+                            throw fail;
                         }
-
+                        catch (Exception ex)
+                        {
+                            var msg = string.Format("Plugin '{0}'. {1}", pluginDescriptor.FriendlyName, ex.Message);
+                            var fail = new Exception(msg, ex);
+                            throw fail;
+                        }
                     }
                 }
-                catch (Exception)
+                catch (Exception ex)
+                {
+                    var msg = string.Empty;
+                    for (var e = ex; e != null; e = ex.InnerException)
+                        msg += e.Message + Environment.NewLine;
+                    var fail = new Exception(msg, ex);
+                    throw fail;
+                }
+                ReferencedPlugins = referencedPlugins;
+                IncompatiblePlugins = incompatiblePlugins;
+            }
+        }
+
+        /// <summary>
+        /// 标记插件已安装
+        /// </summary>
+        /// <param name="systemName"></param>
+        public static void MarkPluginAsInstalled(string systemName)
+        {
+            if (string.IsNullOrEmpty(systemName))
+                throw new ArgumentException("systemName");
+
+            var filePath = HostingEnvironment.MapPath(InstalledPluginsFilePath);
+            if (!File.Exists(filePath))
+                using (File.Create(filePath))
                 {
 
                 }
+            var installedPlginSystemNames = PluginFileParser.ParseInstalledPluginsFile(GetInstalledPluginsFilePath());
+
+            bool alreadyMarkedAsInstalled = installedPlginSystemNames.FirstOrDefault(x => x.Equals(systemName, StringComparison.InvariantCultureIgnoreCase)) != null;
+            if (!alreadyMarkedAsInstalled)
+            {
+                installedPlginSystemNames.Add(systemName);
             }
+            PluginFileParser.SaveInstalledPluginsFile(installedPlginSystemNames, filePath);
+        }
+
+        /// <summary>
+        /// 标记插件已卸载
+        /// </summary>
+        /// <param name="systemName"></param>
+        public static void MarkPluginAsUnInstalled(string systemName)
+        {
+            if (string.IsNullOrEmpty(systemName))
+                throw new ArgumentException("systemName");
+
+            var filePath = HostingEnvironment.MapPath(InstalledPluginsFilePath);
+            if (!File.Exists(filePath))
+                using (File.Create(filePath))
+                {
+
+                }
+            var installedPlginSystemNames = PluginFileParser.ParseInstalledPluginsFile(GetInstalledPluginsFilePath());
+
+            bool alreadyMarkedAsInstalled = installedPlginSystemNames.FirstOrDefault(x => x.Equals(systemName, StringComparison.InvariantCultureIgnoreCase)) != null;
+            if (alreadyMarkedAsInstalled)
+            {
+                installedPlginSystemNames.Remove(systemName);
+            }
+            PluginFileParser.SaveInstalledPluginsFile(installedPlginSystemNames, filePath);
+        }
+
+        /// <summary>
+        /// 标记所有的插件已卸载
+        /// </summary>
+        public static void MarkAllPluginsAsUnInstalled()
+        {
+            var filePath = HostingEnvironment.MapPath(InstalledPluginsFilePath);
+            if (File.Exists(filePath))
+                File.Delete(filePath);
+        }
+
+        /// <summary>
+        /// 判断程序集是否已加载
+        /// </summary>
+        /// <param name="fileInfo"></param>
+        /// <returns></returns>
+        private static bool IsAlreadyLoaded(FileInfo fileInfo)
+        {
+            try
+            {
+                string fileNameWithoutExt = Path.GetFileNameWithoutExtension(fileInfo.FullName);
+                if (fileNameWithoutExt == null)
+                    throw new Exception("不存在该文件");
+                foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    string assemblyName = assembly.FullName.Split(new[] { ',' }).FirstOrDefault();
+                    if (fileNameWithoutExt.Equals(assemblyName, StringComparison.InvariantCultureIgnoreCase))
+                        return true;
+                }
+            }
+            catch (Exception)
+            {
+            }
+            return false;
         }
 
         /// <summary>
@@ -201,14 +327,105 @@ namespace Core.Plugins
         /// <returns></returns>
         private static Assembly PerformFileDeploy(FileInfo plugin)
         {
-            if(plugin.Directory.Parent == null)
+            if (plugin.Directory.Parent == null)
             {
                 throw new InvalidOperationException("The plugin directory for the " + plugin.Name + " file exists in a folder outside of the allowed nopCommerce folder heirarchy");
             }
 
             FileInfo shadowCopiedPlug;
 
-            return null;
+            if (CommonHelper.GetTrustLevel() != AspNetHostingPermissionLevel.Unrestricted)
+            {
+                var shadowCopyPlugFolder = Directory.CreateDirectory(_shadowCopyFolder.FullName);
+                shadowCopiedPlug = InitializeMediumTrust(plugin, shadowCopyPlugFolder);
+            }
+            else
+            {
+                var directory = AppDomain.CurrentDomain.DynamicDirectory;
+                shadowCopiedPlug = InitializeFullTrust(plugin, new DirectoryInfo(directory));
+            }
+
+            var shadowCopidAssembly = Assembly.Load(AssemblyName.GetAssemblyName(shadowCopiedPlug.FullName));
+            BuildManager.AddReferencedAssembly(shadowCopidAssembly);
+            return shadowCopidAssembly;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="plug"></param>
+        /// <param name="shadowCopyPlugFolder"></param>
+        /// <returns></returns>
+        private static FileInfo InitializeFullTrust(FileInfo plug, DirectoryInfo shadowCopyPlugFolder)
+        {
+            var shadowCopiedPlug = new FileInfo(Path.Combine(shadowCopyPlugFolder.FullName, plug.Name));
+            try
+            {
+                File.Copy(plug.FullName, shadowCopiedPlug.FullName, true);
+            }
+            catch (IOException)
+            {
+                try
+                {
+                    var oldFile = shadowCopiedPlug.FullName + Guid.NewGuid().ToString("N") + ".old";
+                    File.Move(shadowCopiedPlug.FullName, oldFile);
+                }
+                catch (IOException exc)
+                {
+                    throw new IOException(shadowCopiedPlug.FullName + " rename failed, cannot initialize plugin", exc);
+                }
+                File.Copy(plug.FullName, shadowCopiedPlug.FullName, true);
+            }
+            return shadowCopiedPlug;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="plug"></param>
+        /// <param name="shadowCopyPlugFolder"></param>
+        /// <returns></returns>
+        private static FileInfo InitializeMediumTrust(FileInfo plug, DirectoryInfo shadowCopyPlugFolder)
+        {
+            bool shouldCopy = true;
+            var shadowCopiedPlug = new FileInfo(Path.Combine(shadowCopyPlugFolder.FullName + plug.Name));
+
+            if (shadowCopiedPlug.Exists)
+            {
+                var areFilesIdenticial = shadowCopiedPlug.CreationTimeUtc.Ticks > plug.CreationTimeUtc.Ticks;
+                if (areFilesIdenticial)
+                    shouldCopy = false;
+                else
+                {
+                    shouldCopy = true;
+                    File.Delete(shadowCopiedPlug.FullName);
+                }
+            }
+
+            if (shouldCopy)
+            {
+                try
+                {
+                    File.Copy(plug.FullName, shadowCopiedPlug.FullName, true);
+                }
+                catch (IOException)
+                {
+                    Debug.WriteLine(shadowCopiedPlug.FullName + " is locked, attempting to rename");
+
+                    try
+                    {
+                        var oldFile = shadowCopiedPlug.FullName + Guid.NewGuid().ToString("N") + ".old";
+                        File.Move(shadowCopiedPlug.FullName, oldFile);
+                    }
+                    catch (IOException exc)
+                    {
+                        throw new IOException(shadowCopiedPlug.FullName + " rename failed, cannot initialize plugin", exc);
+                    }
+
+                    File.Copy(plug.FullName, shadowCopiedPlug.FullName, true);
+                }
+            }
+            return shadowCopiedPlug;
         }
     }
 }

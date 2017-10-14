@@ -1,0 +1,8 @@
+﻿Group: LpwPlugin
+FriendlyName: Lpw Test
+SystemName: MyPlugin
+Version: 1.00
+SupportedVersions: 3.70
+Author: lpw
+DisplayOrder: 1
+FileName: MyPlugin.dll
