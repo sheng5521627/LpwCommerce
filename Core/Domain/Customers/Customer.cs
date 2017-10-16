@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Core.Domain.Common;
+using Core.Domain.Orders;
 
 namespace Core.Domain.Customers
 {
@@ -164,6 +166,7 @@ namespace Core.Domain.Customers
         /// Gets or sets return request of this customer
         /// </summary>
         public virtual ICollection<ReturnRequest> ReturnRequests
+
         {
             get { return _returnRequests ?? (_returnRequests = new List<ReturnRequest>()); }
             protected set { _returnRequests = value; }

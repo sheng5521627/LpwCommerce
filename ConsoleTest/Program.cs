@@ -12,10 +12,12 @@ using System.Threading.Tasks;
 using System.Globalization;
 using Core.Caching;
 using System.Threading;
+using Core.ComponentModel;
 using Web.Framework;
 using Data;
 using Core.Domain.Stores;
 using Core.Data;
+using System.Data.Entity;
 
 namespace ConsoleTest
 {
@@ -24,10 +26,7 @@ namespace ConsoleTest
         static void Main(string[] args)
         {
             EngineContext.Initialize(false);
-
-            var flag = EngineContext.Current.ContainnerManager.IsRegistered<Store>();
             var a = EngineContext.Current.Resolve<A>();
-            
 
             Console.ReadLine();
         }
@@ -39,7 +38,9 @@ namespace ConsoleTest
         public A(IRepository<Store> repository)
         {
             _repository = repository;
-            var list = _repository.GetById(11);
+            var list = _repository.GetById(1);
+
+            Console.WriteLine(list.Name);
         }
     }
 }

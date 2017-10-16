@@ -1,2 +1,2 @@
 ﻿DataProvider:sqlserver
-DataConnectionString: Data Source=(local);Initial Catalog=lpwnop;Integrated Security=True;Persist Security Info=False
+DataConnectionString: Data Source=LPW-PC;Initial Catalog=MyNop;Integrated Security=True

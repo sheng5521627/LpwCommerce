@@ -10,7 +10,7 @@ namespace Core.Data
     {
         private static bool? _databaseIsInstalled;
 
-        public static bool DataBaseIsInstalled()
+        public static bool DatabaseIsInstalled()
         {
             if (!_databaseIsInstalled.HasValue)
             {

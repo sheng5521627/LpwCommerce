@@ -72,7 +72,7 @@
       <Name>Core</Name>
     </ProjectReference>
     <ProjectReference Include="..\Data\Data.csproj">
-      <Project>{8DD0DF8B-4141-44C2-A75F-4A68B92319DB}</Project>
+      <Project>{8dd0df8b-4141-44c2-a75f-4a68b92319db}</Project>
       <Name>Data</Name>
     </ProjectReference>
     <ProjectReference Include="..\Web.Framework\Web.Framework.csproj">
