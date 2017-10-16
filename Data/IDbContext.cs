@@ -12,7 +12,7 @@ namespace Data
     {
         IDbSet<TEntity> Set<TEntity>() where TEntity : BaseEntity;
 
-        int SaveChanages();
+        int SaveChanges();
 
         /// <summary>
         /// 执行存储过程查询
@@ -46,7 +46,7 @@ namespace Data
         /// 
         /// </summary>
         /// <param name="entity"></param>
-        void Detch(object entity);
+        void Detach(object entity);
 
         /// <summary>
         /// 

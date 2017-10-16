@@ -24,6 +24,8 @@ namespace ConsoleTest
         {
             builder.RegisterType<Student>().As<IPerson>();
             builder.RegisterType<Teacher>().As<IPerson>();
+
+            builder.RegisterType<A>();
         }
     }
 }

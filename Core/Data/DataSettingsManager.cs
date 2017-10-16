@@ -8,7 +8,7 @@ using System.Web.Hosting;
 
 namespace Core.Data
 {
-    public partial class DataSettingManager
+    public partial class DataSettingsManager
     {
         protected const string separator = ":";
 

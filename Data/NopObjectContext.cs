@@ -17,6 +17,11 @@ namespace Data
     /// </summary>
     public class NopObjectContext : DbContext, IDbContext
     {
+        //public NopObjectContext()
+        //{
+
+        //}
+
         public NopObjectContext(string nameOrConnectionString)
             : base(nameOrConnectionString)
         {
@@ -122,7 +127,7 @@ namespace Data
         /// <param name="sql"></param>
         /// <param name="parameters"></param>
         /// <returns></returns>
-        public IEnumerable<TEntity> Query<TEntity>(string sql, params object[] parameters)
+        public IEnumerable<TEntity> SqlQuery<TEntity>(string sql, params object[] parameters)
         {
             return this.Database.SqlQuery<TEntity>(sql, parameters);
         }
@@ -179,7 +184,7 @@ namespace Data
         /// <summary>
         /// 
         /// </summary>
-        public virtual bool AutoDetectChangesEnabled
+        public virtual bool AutoDetechChangesEnabled
         {
             get { return this.Configuration.AutoDetectChangesEnabled; }
             set { this.Configuration.AutoDetectChangesEnabled = value; }
