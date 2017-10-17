@@ -184,6 +184,7 @@
     <Content Include="ApplicationInsights.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="App_Data\uas_20140809-02.ini" />
     <None Include="Scripts\jquery-1.10.2.intellisense.js" />
     <Content Include="Scripts\jquery-1.10.2.js" />
     <Content Include="Scripts\jquery-1.10.2.min.js" />
@@ -231,6 +232,10 @@
     <ProjectReference Include="..\Data\Data.csproj">
       <Project>{8dd0df8b-4141-44c2-a75f-4a68b92319db}</Project>
       <Name>Data</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Services\Services.csproj">
+      <Project>{81bb64a8-633e-4e04-8b80-837c3db97d35}</Project>
+      <Name>Services</Name>
     </ProjectReference>
     <ProjectReference Include="..\Web.Framework\Web.Framework.csproj">
       <Project>{53ad9894-d1fd-4c45-92b7-f5301bd74634}</Project>

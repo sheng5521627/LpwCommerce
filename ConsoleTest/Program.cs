@@ -18,6 +18,9 @@ using Data;
 using Core.Domain.Stores;
 using Core.Data;
 using System.Data.Entity;
+using Services.Helpers;
+using Core.Domain.Blogs;
+using Services.Configuration;
 
 namespace ConsoleTest
 {
@@ -26,7 +29,9 @@ namespace ConsoleTest
         static void Main(string[] args)
         {
             EngineContext.Initialize(false);
-            var a = EngineContext.Current.Resolve<A>();
+
+            A a = EngineContext.Current.ContainnerManager.ResolveUnregistered<A>();
+            Console.Write(EngineContext.Current.ContainnerManager.IsRegistered<A>());
 
             Console.ReadLine();
         }
@@ -34,13 +39,6 @@ namespace ConsoleTest
 
     public class A
     {
-        private IRepository<Store> _repository;
-        public A(IRepository<Store> repository)
-        {
-            _repository = repository;
-            var list = _repository.GetById(1);
 
-            Console.WriteLine(list.Name);
-        }
     }
 }

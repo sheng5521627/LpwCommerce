@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Core.Data;
 using Core.Infrastructure;
+using System.Web.Hosting;
 
 namespace Core
 {
@@ -380,6 +381,23 @@ namespace Core
             if (extension == null) return false;
 
             return _staticFileExtensions.Contains(extension);
+        }
+
+        /// <summary>
+        /// Maps a virtual path to a physical disk path.
+        /// </summary>
+        /// <param name="path">The path to map. E.g. "~/bin"</param>
+        /// <returns>The physical path. E.g. "c:\inetpub\wwwroot\bin"</returns>
+        public virtual string MapPath(string path)
+        {
+            if (HostingEnvironment.IsHosted)
+            {
+                return HostingEnvironment.MapPath(path);
+            }
+
+            string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            path = path.Replace("~/", "").TrimStart('/').Replace('/', '\\');
+            return Path.Combine(baseDirectory, path);
         }
 
         /// <summary>

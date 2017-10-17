@@ -122,7 +122,7 @@ namespace Data
         /// <typeparam name="T"></typeparam>
         /// <param name="context"></param>
         /// <returns></returns>
-        public static string GetTableName<T>(this DbContext context) where T : BaseEntity
+        public static string GetTableName<T>(this IDbContext context) where T : BaseEntity
         {
             var adapter = ((IObjectContextAdapter)context).ObjectContext;
             var storageModel = (StoreItemCollection)adapter.MetadataWorkspace.GetItemCollection(DataSpace.SSpace);
