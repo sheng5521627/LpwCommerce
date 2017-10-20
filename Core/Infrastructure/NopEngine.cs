@@ -43,7 +43,8 @@ namespace Core.Infrastructure
         {
             var builder = new ContainerBuilder();
 
-            var typeFinder = new WebAppTypeFinder();
+            var typeFinder = new AppDomainTypeFinder();
+            //var typeFinder = new WebAppTypeFinder();
             builder = new ContainerBuilder();
             builder.RegisterInstance(config).As<NopConfig>().SingleInstance();
             builder.RegisterInstance(this).As<IEngine>().SingleInstance();

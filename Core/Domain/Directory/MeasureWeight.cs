@@ -8,6 +8,7 @@ namespace Core.Domain.Directory
 {
     /// <summary>
     /// Represents a measure weight
+    /// 测量体重
     /// </summary>
     public partial class MeasureWeight : BaseEntity
     {

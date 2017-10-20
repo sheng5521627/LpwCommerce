@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Autofac;
 using Core.Configuration;
 using Core.Infrastructure;
+using Autofac.Core;
+using Core.Caching;
 
 namespace ConsoleTest
 {
@@ -22,7 +24,7 @@ namespace ConsoleTest
 
         public void Register(ContainerBuilder builder, ITypeFinder typeFinder, NopConfig config)
         {
-            builder.RegisterType<Student>().As<IPerson>();
+            builder.RegisterType<Student>().As<IPerson>().AsSelf().WithParameter(ResolvedParameter.ForNamed<ICacheManager>("nop_cache_static"));
             builder.RegisterType<Teacher>().As<IPerson>();
         }
     }

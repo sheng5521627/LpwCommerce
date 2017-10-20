@@ -31,7 +31,7 @@ namespace Core.Domain.Shipping
         public int DisplayOrder { get; set; }
 
         /// <summary>
-        /// Gets or sets the restricted countries
+        /// Gets or sets the restricted countries(受限制的城市)
         /// </summary>
         public virtual ICollection<Country> RestrictedCountries
         {

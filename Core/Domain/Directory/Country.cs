@@ -49,7 +49,7 @@ namespace Core.Domain.Directory
         public int NumericIsoCode { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether customers in this country must be charged EU VAT
+        /// Gets or sets a value indicating whether customers in this country must be charged EU VAT(欧盟增值税)
         /// </summary>
         public bool SubjectToVat { get; set; }
 

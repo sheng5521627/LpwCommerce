@@ -1,7 +1,14 @@
 ﻿using Autofac;
+using Autofac.Builder;
+using Autofac.Core;
+using Autofac.Core.Activators.Delegate;
+using Autofac.Core.Lifetime;
+using Autofac.Core.Registration;
+using Core.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -11,48 +18,53 @@ namespace AutoFacTest
     {
         static void Main(string[] args)
         {
-            Type type = typeof(A);
-            Type type1 = typeof(D);
             var builder = new ContainerBuilder();
-            builder.RegisterType(type).As(type.FindInterfaces((t, c) => 
-            {
-                return t.IsGenericType && ((Type)c).IsAssignableFrom(t.GetGenericTypeDefinition());
-            },typeof(IA<>))).InstancePerDependency();
+            builder.RegisterSource(new SettingsSource());
 
-            builder.RegisterType(type1).As(type1.FindInterfaces((t, c) =>
-            {
-                return t.IsGenericType && ((Type)c).IsAssignableFrom(t.GetGenericTypeDefinition());
-            }, typeof(IA<>))).InstancePerDependency();
             var container = builder.Build();
-            var list = container.Resolve<IEnumerable<IA<C>>>().ToArray();
-
+            container.Resolve<MySettings>();
             Console.ReadLine();
         }
     }
 
-    public interface IA<T>
+    public class SettingsSource : IRegistrationSource
     {
+        static readonly MethodInfo BuildMethod = typeof(SettingsSource).GetMethod("BuildRegistration", BindingFlags.NonPublic | BindingFlags.Static);
+        public bool IsAdapterForIndividualComponents
+        {
+            get
+            {
+                return false;
+            }
+        }
 
+        public IEnumerable<IComponentRegistration> RegistrationsFor(Service service, Func<Service, IEnumerable<IComponentRegistration>> registrationAccessor)
+        {
+            var ts = service as TypedService;
+            if (ts != null && typeof(ISettings).IsAssignableFrom(ts.ServiceType))
+            {
+                var buildMethod = BuildMethod.MakeGenericMethod(ts.ServiceType);
+                yield return (IComponentRegistration)buildMethod.Invoke(null, null);
+            }
+        }
+
+        /// <summary>
+        /// 创建注册组件
+        /// </summary>
+        /// <typeparam name="TSettings"></typeparam>
+        /// <returns></returns>
+        static IComponentRegistration BuildRegistration<TSettings>() where TSettings : ISettings, new()
+        {
+            return RegistrationBuilder.ForDelegate((c, p) =>
+            {
+                return new TSettings();
+            })
+            .InstancePerLifetimeScope()
+            .CreateRegistration();
+        }
     }
-    public interface IB<T>: IA<T>
-    {
 
-    }
-    public class A : IA<B>,IA<C>
-    {
-
-    }
-    public class B
-    {
-
-    }
-
-    public class C
-    {
-
-    }
-
-    public class D : IA<C>
+    public class MySettings :ISettings
     {
 
     }

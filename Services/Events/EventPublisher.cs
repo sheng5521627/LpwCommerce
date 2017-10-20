@@ -26,7 +26,7 @@ namespace Services.Events
         protected virtual void PublishToConsumer<T>(IConsumer<T> x,T eventMessage)
         {
             var plugin = FingPlugin(x.GetType());
-            if (plugin == null && !plugin.Installed)
+            if (plugin != null && !plugin.Installed)
                 return;
             try
             {

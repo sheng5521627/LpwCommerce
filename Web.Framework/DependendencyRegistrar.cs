@@ -16,6 +16,11 @@ using Services.Helpers;
 using Autofac.Integration.Mvc;
 using Core.Caching;
 using Services.Events;
+using Autofac.Core;
+using Autofac.Builder;
+using Services.Configuration;
+using System.Reflection;
+using Services.Stores;
 
 namespace Web.Framework
 {
@@ -43,6 +48,9 @@ namespace Web.Framework
             builder.RegisterType<UserAgentHelper>().As<IUserAgentHelper>().InstancePerLifetimeScope();
 
             #endregion
+
+            //store context
+            builder.RegisterType<WebStoreContext>().As<IStoreContext>().InstancePerLifetimeScope();
 
             #region 数据层的依赖注入
 
@@ -87,10 +95,11 @@ namespace Web.Framework
             #region 事件依赖注入
 
             var consumers = typeFinder.FindClassesOfType(typeof(IConsumer<>));
-            foreach(var consumer in consumers)
+            foreach (var consumer in consumers)
             {
                 builder.RegisterType(consumer)
-                    .As(consumer.FindInterfaces((type, criteria) => {
+                    .As(consumer.FindInterfaces((type, criteria) =>
+                    {
                         var isMatch = type.IsGenericType && ((Type)criteria).IsAssignableFrom(type.GetGenericTypeDefinition());
                         return isMatch;
                     }, typeof(IConsumer<>))).InstancePerLifetimeScope();
@@ -98,6 +107,57 @@ namespace Web.Framework
             builder.RegisterType<EventPublisher>().As<IEventPublisher>().SingleInstance();
             builder.RegisterType<SubscriptionService>().As<ISubscriptionService>().SingleInstance();
             #endregion
+
+            #region 配置信息注册源
+
+            builder.RegisterType<SettingService>().As<ISettingService>().WithParameter(ResolvedParameter.ForNamed<ICacheManager>("nop_cache_static")).InstancePerLifetimeScope();
+            builder.RegisterSource(new SettingsSource());
+
+            #endregion
+
+            #region 注册服务
+
+            builder.RegisterType<StoreService>().As<IStoreService>().InstancePerLifetimeScope();
+            builder.RegisterType<StoreMappingService>().As<IStoreMappingService>().WithParameter(ResolvedParameter.ForNamed<ICacheManager>("nop_cache_static")).InstancePerLifetimeScope();
+
+            #endregion
+        }
+
+        public class SettingsSource : IRegistrationSource
+        {
+            static readonly MethodInfo BuildMethod = typeof(SettingsSource).GetMethod("BuildRegistration", BindingFlags.NonPublic | BindingFlags.Static);
+            public bool IsAdapterForIndividualComponents
+            {
+                get
+                {
+                    return false;
+                }
+            }
+
+            public IEnumerable<IComponentRegistration> RegistrationsFor(Service service, Func<Service, IEnumerable<IComponentRegistration>> registrationAccessor)
+            {
+                var ts = service as TypedService;
+                if (ts != null && typeof(ISettings).IsAssignableFrom(ts.ServiceType))
+                {
+                    var buildMethod = BuildMethod.MakeGenericMethod(ts.ServiceType);
+                    yield return (IComponentRegistration)buildMethod.Invoke(null, null);
+                }
+            }
+
+            /// <summary>
+            /// 创建注册组件
+            /// </summary>
+            /// <typeparam name="TSettings"></typeparam>
+            /// <returns></returns>
+            static IComponentRegistration BuildRegistration<TSettings>() where TSettings : ISettings, new()
+            {
+                return RegistrationBuilder.ForDelegate((c, p) =>
+                {
+                    return c.Resolve<ISettingService>().LoadSetting<TSettings>();
+                })
+                .InstancePerLifetimeScope()
+                .CreateRegistration();
+            }
         }
     }
 }

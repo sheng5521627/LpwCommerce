@@ -9,6 +9,7 @@ namespace Core.Domain.Directory
 {
     /// <summary>
     /// Represents a state/province
+    /// 州省
     /// </summary>
     public partial class StateProvince : BaseEntity, ILocalizedEntity
     {
@@ -24,6 +25,7 @@ namespace Core.Domain.Directory
 
         /// <summary>
         /// Gets or sets the abbreviation
+        /// 缩写
         /// </summary>
         public string Abbreviation { get; set; }
 

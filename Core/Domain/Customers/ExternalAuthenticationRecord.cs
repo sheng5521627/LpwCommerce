@@ -8,6 +8,7 @@ namespace Core.Domain.Customers
 {
     /// <summary>
     /// Represents an external authentication record
+    /// 外部认证记录
     /// </summary>
     public partial class ExternalAuthenticationRecord : BaseEntity
     {

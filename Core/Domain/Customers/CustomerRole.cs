@@ -9,6 +9,7 @@ namespace Core.Domain.Customers
 {
     /// <summary>
     /// Represents a customer role
+    /// 顾客角色
     /// </summary>
     public partial class CustomerRole : BaseEntity
     {
@@ -25,7 +26,7 @@ namespace Core.Domain.Customers
         public bool FreeShipping { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether the customer role is marked as tax exempt
+        /// Gets or sets a value indicating whether the customer role is marked as tax exempt(免税)
         /// </summary>
         public bool TaxExempt { get; set; }
 
@@ -45,8 +46,8 @@ namespace Core.Domain.Customers
         public string SystemName { get; set; }
 
         /// <summary>
-        /// Gets or sets a product identifier that is required by this customer role. 
-        /// A customer is added to this customer role once a specified product is purchased.
+        /// 获取或设置该客户角色所需的产品标识符。
+        /// 一旦指定的产品被购买，客户就被添加到这个客户角色中。
         /// </summary>
         public int PurchasedWithProductId { get; set; }
 

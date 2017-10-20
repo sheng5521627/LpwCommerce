@@ -9,6 +9,7 @@ namespace Core.Domain.Security
 {
     /// <summary>
     /// Represents a permission record
+    /// 权限
     /// </summary>
     public partial class PermissionRecord : BaseEntity
     {
