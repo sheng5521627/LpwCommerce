@@ -31,39 +31,59 @@ namespace ConsoleTest
     {
         static void Main(string[] args)
         {
-            RemotePost q = new RemotePost();
-            EngineContext.Initialize(false);
-
-            List<A> list1 = new List<A>() { new A() { Id = 1, Name = "a" }, new ConsoleTest.A() { Id = 2, Name = "b" } };
-            List<B> list2 = new List<ConsoleTest.B>() { new ConsoleTest.B() { EntityId = 1, EntityName = "a" }, new ConsoleTest.B() { EntityId = 2, EntityName = "b" } };
-
-            var query = from a in list1
-                        join b in list2
-                        on new { id = a.Id, name = a.Name } equals new { id = b.EntityId, name = b.EntityName } into ab
-                        from b in ab.DefaultIfEmpty()
-                        select a;
-            var list = query.ToList();
-            foreach(var item in list)
+            //RemotePost q = new RemotePost();
+            //EngineContext.Initialize(false);
+            using (var context = new MyDbContext())
             {
-
+                var school = context.Schools.FirstOrDefault();
             }
 
-            Console.ReadLine();
+                Console.ReadLine();
         }
     }
-    
+    public class MyDbContext : DbContext
+    {
+        public MyDbContext()
+            : base(nameOrConnectionString: "Data Source=.;Initial Catalog=MyFirst;Integrated Security=True")
+        {
 
-    public class A
+        }
+
+        protected override void OnModelCreating(DbModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<School>().HasKey(m => m.Id).ToTable("School");
+            modelBuilder.Entity<Student>().HasKey(m => m.Id).ToTable("Student").HasRequired(m => m.School).WithMany(m => m.Students).HasForeignKey(m => m.SchoolId);
+
+            base.OnModelCreating(modelBuilder);
+        }
+
+        public DbSet<School> Schools { get; set; }
+        public DbSet<Student> Students { get; set; }
+    }
+
+    public class School
+    {
+        private ICollection<Student> _students;
+
+        public int Id { get; set; }
+
+        public string Name { get; set; }
+
+        public virtual ICollection<Student> Students
+        {
+            get { return _students??(_students=new List<Student>()); }
+            set { _students = value; }
+        }
+    }
+
+    public class Student
     {
         public int Id { get; set; }
 
         public string Name { get; set; }
-    }
 
-    public class B
-    {
-        public int EntityId { get; set; }
+        public int SchoolId { get; set; }
 
-        public string EntityName { get; set; }
+        public virtual School School { get; set; }
     }
 }

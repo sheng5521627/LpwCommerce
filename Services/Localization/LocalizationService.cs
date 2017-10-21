@@ -11,6 +11,9 @@ using Core.Caching;
 using Data;
 using Core.Domain.Common;
 using Services.Events;
+using System.IO;
+using System.Xml;
+using System.Data;
 
 namespace Services.Localization
 {
@@ -108,7 +111,27 @@ namespace Services.Localization
 
         public string ExportResourceToXml(Language language)
         {
-            throw new NotImplementedException();
+            if (language == null)
+                throw new ArgumentNullException("language");
+
+            var sb = new StringBuilder();
+            var stringWriter = new StringWriter(sb);
+            var xmlWriter = new XmlTextWriter(stringWriter);
+            xmlWriter.WriteStartDocument();
+            xmlWriter.WriteStartElement("Language");
+            xmlWriter.WriteAttributeString("Name", language.Name);
+            var resources = GetAllResource(language.Id);
+            foreach (var resource in resources)
+            {
+                xmlWriter.WriteStartElement("LocaleResource");
+                xmlWriter.WriteAttributeString("Name", resource.ResourceName);
+                xmlWriter.WriteElementString("Value", resource.ResourceValue);
+                xmlWriter.WriteEndElement();
+            }
+            xmlWriter.WriteEndElement();
+            xmlWriter.WriteEndDocument();
+            xmlWriter.Close();
+            return stringWriter.ToString();
         }
 
         public IList<LocaleStringResource> GetAllResource(int languageId)
@@ -124,7 +147,7 @@ namespace Services.Localization
         public Dictionary<string, KeyValuePair<int, string>> GetAllResourceValues(int languageId)
         {
             string key = string.Format(LOCALSTRINGRESOURCES_ALL_KEY, languageId);
-            return _cacheManager.Get(key, () => 
+            return _cacheManager.Get(key, () =>
             {
                 var query = from lsr in _lsrRepository.Table
                             orderby lsr.ResourceName
@@ -132,7 +155,7 @@ namespace Services.Localization
                             select lsr;
                 var locales = query.ToList();
                 var dictionary = new Dictionary<string, KeyValuePair<int, string>>();
-                foreach(var locale in locales)
+                foreach (var locale in locales)
                 {
                     var resourceName = locale.ResourceName.ToLowerInvariant();
                     if (!dictionary.ContainsKey(resourceName))
@@ -165,7 +188,7 @@ namespace Services.Localization
                         select lsr;
             var localeStringResource = query.FirstOrDefault();
 
-            if(localeStringResource ==null && logIfNotFound)
+            if (localeStringResource == null && logIfNotFound)
             {
                 _logger.Warning(string.Format("Resource string ({0}) not found. Language ID = {1}", resourceName, languageId));
             }
@@ -197,7 +220,7 @@ namespace Services.Localization
             else
             {
                 string key = string.Format(LOCALSTRINGRESOURCES_BY_RESOURCENAME_KEY, languageId, resourceKey);
-                string lsr = _cacheManager.Get(key, () => 
+                string lsr = _cacheManager.Get(key, () =>
                 {
                     var query = from l in _lsrRepository.Table
                                 where l.LanguageId == languageId && l.ResourceName == resourceKey
@@ -209,7 +232,7 @@ namespace Services.Localization
             }
             if (string.IsNullOrEmpty(result))
             {
-                if(logIfNotFound)
+                if (logIfNotFound)
                     _logger.Warning(string.Format("Resource string ({0}) is not found. Language ID = {1}", resourceKey, languageId));
                 if (!string.IsNullOrEmpty(defaultValue))
                 {
@@ -226,7 +249,79 @@ namespace Services.Localization
 
         public void ImportResourceFromXml(Language language, string xml)
         {
-            throw new NotImplementedException();
+            if (language == null)
+                throw new ArgumentNullException("language");
+
+            if (string.IsNullOrEmpty(xml))
+                return;
+
+            if (_commonSettings.UseStoredProceduresIfSupported && _dataProvider.StoredProceduredSupported)
+            {
+                // SQL 2005 insists that your XML schema incoding be in UTF - 16.
+                //Otherwise, you'll get "XML parsing: line 1, character XXX, unable to switch the encoding"
+                //so let's remove XML declaration
+                var inDoc = new XmlDocument();
+                inDoc.LoadXml(xml);
+                var sb = new StringBuilder();
+                using (var xWriter = XmlWriter.Create(sb, new XmlWriterSettings() { OmitXmlDeclaration = true }))
+                {
+                    inDoc.Save(xWriter);
+                    xWriter.Close();
+                }
+
+                var outDoc = new XmlDocument();
+                outDoc.LoadXml(sb.ToString());
+                xml = outDoc.OuterXml;
+
+                //stored procedures are enabled and supported by the database.
+                var pLanguageId = _dataProvider.GetParameter();
+                pLanguageId.ParameterName = "LanguageId";
+                pLanguageId.Value = language.Id;
+                pLanguageId.DbType = DbType.Int32;
+
+                var pXmlPackage = _dataProvider.GetParameter();
+                pXmlPackage.ParameterName = "XmlPackage";
+                pXmlPackage.Value = xml;
+                pXmlPackage.DbType = DbType.Xml;
+
+                //long-running query. specify timeout (600 seconds)
+                _dbContext.ExecuteSqlCommand("EXEC [LanguagePackImport] @LanguageId, @XmlPackage", false, 600, pLanguageId, pXmlPackage);
+            }
+            else
+            {
+                var xmlDoc = new XmlDocument();
+                xmlDoc.LoadXml(xml);
+
+                var nodes = xmlDoc.SelectNodes(@"//Language/LocaleResource");
+                foreach (XmlNode node in nodes)
+                {
+                    string name = node.Attributes["Name"].InnerText.Trim();
+                    string value = "";
+                    var valueNode = node.SelectSingleNode("Value");
+                    if (valueNode != null)
+                        value = valueNode.InnerText;
+
+                    if (string.IsNullOrEmpty(name))
+                        continue;
+
+                    //do not use "Insert"/"Update" methods because they clear cache
+                    //let's bulk insert
+                    var resource = language.LocaleStringResources.FirstOrDefault(x => x.ResourceName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+                    if (resource != null)
+                        resource.ResourceValue = value;
+                    else
+                    {
+                        language.LocaleStringResources.Add(new LocaleStringResource()
+                        {
+                            ResourceName = name,
+                            ResourceValue = value
+                        });
+                    }
+                }
+                _languageService.UpdateLanguage(language);
+            }
+
+            _cacheManager.RemoveByPattern(LOCALSTRINGRESOURCES_PATTERN_KEY);
         }
 
         public void InsertLocaleStringResource(LocaleStringResource localeStringResource)

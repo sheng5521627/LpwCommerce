@@ -74,6 +74,8 @@ namespace Services.Localization
             this._eventPublisher = eventPublisher;
         }
 
+        #endregion
+
         public void DeleteLanguage(Language language)
         {
             if (language == null)

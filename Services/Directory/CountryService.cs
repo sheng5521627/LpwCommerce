@@ -8,6 +8,7 @@ using Core.Caching;
 using Core.Domain.Catalog;
 using Core.Domain.Stores;
 using System.Linq;
+using Services.Localization;
 
 namespace Services.Directory
 {
@@ -67,6 +68,8 @@ namespace Services.Directory
             this._eventPublisher = eventPublisher;
         }
 
+        #endregion
+
         public void DeleteCountry(Country country)
         {
             if (country == null)
@@ -82,14 +85,14 @@ namespace Services.Directory
         public IList<Country> GetAllCountries(int languageId = 0, bool showHidden = false)
         {
             string key = string.Format(COUNTRIES_ALL_KEY, languageId, showHidden);
-            return _cacheManager.Get(key, () => 
+            return _cacheManager.Get(key, () =>
             {
                 var query = _countryRepository.Table;
                 if (!showHidden)
                     query = query.Where(m => m.Published);
                 query = query.OrderBy(m => m.DisplayOrder).ThenBy(m => m.Name);
 
-                if(!showHidden && !_catalogSettings.IgnoreStoreLimitations)
+                if (!showHidden && !_catalogSettings.IgnoreStoreLimitations)
                 {
                     var currentStoreId = _storeContext.CurrentStore.Id;
                     query = from c in query
@@ -102,51 +105,101 @@ namespace Services.Directory
                             group c by c.Id into cGroup
                             orderby cGroup.Key
                             select cGroup.FirstOrDefault();
-                    query = query.OrderBy(m => m.DisplayOrder).ThenBy(m => m.Name);                           
+                    query = query.OrderBy(m => m.DisplayOrder).ThenBy(m => m.Name);
                 }
 
-
+                var contries = query.ToList();
+                if (languageId > 0)
+                {
+                    contries = contries.OrderBy(m => m.DisplayOrder).ThenBy(m => m.GetLocalized(x => x.Name, languageId)).ToList();
+                }
+                return contries;
             });
         }
 
         public IList<Country> GetAllCountriesForBilling(int languageId = 0, bool showHidden = false)
         {
-            throw new NotImplementedException();
+            return GetAllCountries().Where(m => m.AllowsBilling).ToList();
         }
 
         public IList<Country> GetAllCountriesForShipping(int languageId = 0, bool showHidden = false)
         {
-            throw new NotImplementedException();
+            return GetAllCountries().Where(m => m.AllowsShipping).ToList();
         }
 
         public IList<Country> GetCountriesByIds(int[] countryIds)
         {
-            throw new NotImplementedException();
+            if (countryIds == null || countryIds.Length == 0)
+                return new List<Country>();
+
+            var query = from c in _countryRepository.Table
+                        where countryIds.Contains(c.Id)
+                        select c;
+            var countries = query.ToList();
+            var sortedCountries = new List<Country>();
+            foreach (var id in countryIds)
+            {
+                var country = countries.Find(m => m.Id == id);
+                if (country != null)
+                    sortedCountries.Add(country);
+            }
+
+            return sortedCountries;
         }
 
         public Country GetCountryById(int countryId)
         {
-            throw new NotImplementedException();
+            if (countryId == 0)
+                return null;
+
+            return _countryRepository.GetById(countryId);
         }
 
         public Country GetCountryByThreedLetterIsoCode(string threedLetterIsoCode)
         {
-            throw new NotImplementedException();
+            if (String.IsNullOrEmpty(threedLetterIsoCode))
+                return null;
+
+            var query = from country in _countryRepository.Table
+                        where country.ThreeLetterIsoCode == threedLetterIsoCode
+                        select country;
+            return query.FirstOrDefault();
         }
 
         public Country GetCountryByTwoLetterIsoCode(string twoLetterIsoCode)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrEmpty(twoLetterIsoCode))
+                return null;
+
+            var query = from country in _countryRepository.Table
+                        where country.TwoLetterIsoCode == twoLetterIsoCode
+                        select country;
+
+            return query.FirstOrDefault();
         }
 
         public void InsertCountry(Country country)
         {
-            throw new NotImplementedException();
+            if (country == null)
+                throw new ArgumentNullException("country");
+
+            _countryRepository.Insert(country);
+
+            _cacheManager.RemoveByPattern(COUNTRIES_PATTERN_KEY);
+
+            _eventPublisher.EntityInserted(country);
         }
 
         public void UpdateCountry(Country country)
         {
-            throw new NotImplementedException();
+            if (country == null)
+                throw new ArgumentNullException("country");
+
+            _countryRepository.Update(country);
+
+            _cacheManager.RemoveByPattern(COUNTRIES_PATTERN_KEY);
+
+            _eventPublisher.EntityUpdated(country);
         }
     }
 }
