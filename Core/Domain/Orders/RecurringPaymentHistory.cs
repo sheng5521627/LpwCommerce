@@ -8,6 +8,7 @@ namespace Core.Domain.Orders
 {
     /// <summary>
     /// Represents a recurring payment history
+    /// 重复付款的历史
     /// </summary>
     public partial class RecurringPaymentHistory : BaseEntity
     {

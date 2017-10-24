@@ -10,6 +10,7 @@ namespace Core.Domain.Orders
 {
     /// <summary>
     /// Represents a shopping cart item
+    /// 购物车项目
     /// </summary>
     public partial class ShoppingCartItem : BaseEntity
     {

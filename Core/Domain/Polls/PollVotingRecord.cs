@@ -9,6 +9,7 @@ namespace Core.Domain.Polls
 {
     /// <summary>
     /// Represents a poll voting record
+    /// 投票表决记录
     /// </summary>
     public partial class PollVotingRecord : BaseEntity
     {

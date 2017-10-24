@@ -8,6 +8,7 @@ namespace Core.Domain.Catalog
 {
     /// <summary>
     /// Represents a product specification attribute
+    /// 表示产品规范属性。
     /// </summary>
     public partial class ProductSpecificationAttribute : BaseEntity
     {

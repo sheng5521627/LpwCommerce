@@ -8,6 +8,7 @@ namespace Core.Domain.Discounts
 {
     /// <summary>
     /// Represents a discount requirement
+    /// 表示折扣要求
     /// </summary>
     public partial class DiscountRequirement : BaseEntity
     {

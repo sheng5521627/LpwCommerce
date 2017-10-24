@@ -150,6 +150,7 @@
     <Compile Include="Domain\Catalog\ProductType.cs" />
     <Compile Include="Domain\Catalog\ProductWarehouseInventory.cs" />
     <Compile Include="Domain\Catalog\RecurringProductCyclePeriod.cs" />
+    <Compile Include="Domain\Catalog\RelatedProduct.cs" />
     <Compile Include="Domain\Catalog\RentalPricePeriod.cs" />
     <Compile Include="Domain\Catalog\SpecificationAttribute.cs" />
     <Compile Include="Domain\Catalog\SpecificationAttributeOption.cs" />

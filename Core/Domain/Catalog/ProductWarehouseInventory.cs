@@ -9,6 +9,7 @@ namespace Core.Domain.Catalog
 {
     /// <summary>
     /// Represents a record to manage product inventory per warehouse
+    /// 表示每个仓库管理产品库存的记录。
     /// </summary>
     public partial class ProductWarehouseInventory : BaseEntity
     {

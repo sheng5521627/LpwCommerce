@@ -9,6 +9,7 @@ namespace Core.Domain.Catalog
 {
     /// <summary>
     /// Represents a back in stock subscription
+    /// 表示备用库存订阅
     /// </summary>
     public partial class BackInStockSubscription : BaseEntity
     {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Entity;
+using System.Data.Entity.Core.Objects;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,28 +12,39 @@ namespace EfTest
     {
         static void Main(string[] args)
         {
-
-            Database.SetInitializer(new DropCreateDatabaseIfModelChanges<MyDbContext>());
-            //RemotePost q = new RemotePost();
-            //EngineContext.Initialize(false);
-            using (var context = new MyDbContext())
+            List<int> list1 = new List<int>() { 1, 2, 3, 4, 5 };
+            List<string> list2 = new List<string>() { "a", "b", "c" };
+            var query = from a in list1
+                        from b in list2
+                        select new { a, b };
+            foreach(var item in query.ToList())
             {
-                Person p = new EfTest.Person() { Name = "蓝平旺" };
-                Address a = new Address() { Name = "深圳" };
-                p.Address = a;
-                context.Person.Add(p);
-                context.SaveChanges();
+
             }
-            Console.Write("success");
+                        
+
             Console.ReadLine();
         }
+    }
+
+    public class A
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public int Total { get; set; }
+    }
+    public class B
+    {
+        public int Id { get; set; }
+        public int Aid { get; set; }
+        public int Age { get; set; }
     }
 
     public class MyDbInitialize : IDatabaseInitializer<MyDbContext>
     {
         public void InitializeDatabase(MyDbContext context)
         {
-            
+
         }
     }
     public class MyDbContext : DbContext
@@ -46,14 +58,14 @@ namespace EfTest
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
 
-            modelBuilder.Entity<Person>().ToTable("Person").HasKey(m => m.Id).HasRequired(m => m.Address).WithRequiredPrincipal(m=>m.Person);
+            modelBuilder.Entity<Person>().HasKey(m => m.Id).ToTable("Person").HasOptional(m => m.Address).WithOptionalPrincipal(m => m.Person).Map(m => m.MapKey("PersonId"));
             modelBuilder.Entity<Address>().ToTable("Address").HasKey(m => m.Id);
-            
+
             modelBuilder.Entity<Customer>()
                 .HasKey(m => m.Id).ToTable("Customer")
                 .HasMany(m => m.CustomerRoles)
                 .WithMany().Map(m => m.ToTable("customer_roles"));
-            modelBuilder.Entity<CustomerRole>().HasKey(m => m.Id).ToTable("CustomerRole").HasMany(m => m.Customers).WithMany(m=>m.CustomerRoles);
+            modelBuilder.Entity<CustomerRole>().HasKey(m => m.Id).ToTable("CustomerRole").HasMany(m => m.Customers).WithMany(m => m.CustomerRoles);
 
             modelBuilder.Entity<History>().ToTable("History").HasKey(m => m.Id).HasRequired(m => m.Customer).WithMany().HasForeignKey(m => m.CustomerId);
 
@@ -112,7 +124,7 @@ namespace EfTest
         public int Id { get; set; }
         public string Name { get; set; }
 
-        public Address Address { get; set; }
+        public virtual Address Address { get; set; }
     }
 
     public class Address
@@ -121,8 +133,6 @@ namespace EfTest
 
         public string Name { get; set; }
 
-        public Person Person { get; set; }
-
-        public int PersonId { get; set; }
+        public virtual Person Person { get; set; }
     }
 }

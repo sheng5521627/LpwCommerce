@@ -9,6 +9,7 @@ namespace Core.Domain.Catalog
 {
     /// <summary>
     /// Represents a specification attribute option
+    /// 表示规范属性选项
     /// </summary>
     public partial class SpecificationAttributeOption : BaseEntity, ILocalizedEntity
     {

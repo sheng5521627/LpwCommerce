@@ -20,7 +20,7 @@ namespace Core.Domain.Forums
         /// </summary>
         Sticky = 15,
         /// <summary>
-        /// Announcement
+        /// Announcement(公告)
         /// </summary>
         Announcement = 20,
     }

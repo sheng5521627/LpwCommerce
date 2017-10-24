@@ -8,7 +8,7 @@ using Core.Domain.Customers;
 namespace Core.Domain.Forums
 {
     /// <summary>
-    /// Represents a forum post
+    /// Represents a forum post(论坛的帖子)
     /// </summary>
     public partial class ForumPost : BaseEntity
     {

@@ -9,6 +9,7 @@ namespace Core.Domain.Discounts
 {
     /// <summary>
     /// Represents a discount
+    /// 折扣
     /// </summary>
     public partial class Discount : BaseEntity
     {
@@ -28,7 +29,7 @@ namespace Core.Domain.Discounts
         public int DiscountTypeId { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether to use percentage
+        /// Gets or sets a value indicating whether to use percentage(百分比)
         /// </summary>
         public bool UsePercentage { get; set; }
 
@@ -38,7 +39,7 @@ namespace Core.Domain.Discounts
         public decimal DiscountPercentage { get; set; }
 
         /// <summary>
-        /// Gets or sets the discount amount
+        /// Gets or sets the discount amount(数量)
         /// </summary>
         public decimal DiscountAmount { get; set; }
 
@@ -58,7 +59,7 @@ namespace Core.Domain.Discounts
         public DateTime? EndDateUtc { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether discount requires coupon code
+        /// Gets or sets a value indicating whether discount requires coupon code(优惠码)
         /// </summary>
         public bool RequiresCouponCode { get; set; }
 

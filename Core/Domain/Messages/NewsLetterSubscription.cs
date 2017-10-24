@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Core.Domain.Messages
 {
     /// <summary>
-    /// Represents NewsLetterSubscription entity
+    /// Represents NewsLetterSubscription entity(新闻订阅)
     /// </summary>
     public partial class NewsLetterSubscription : BaseEntity
     {

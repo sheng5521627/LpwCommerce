@@ -10,6 +10,7 @@ namespace Core.Domain.Catalog
 {
     /// <summary>
     /// Represents a product review
+    /// 表示产品评审
     /// </summary>
     public partial class ProductReview : BaseEntity
     {

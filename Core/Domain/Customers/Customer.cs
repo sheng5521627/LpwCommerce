@@ -75,6 +75,7 @@ namespace Core.Domain.Customers
 
         /// <summary>
         /// Gets or sets the affiliate identifier
+        /// 获取或设置附属标识符。
         /// </summary>
         public int AffiliateId { get; set; }
 

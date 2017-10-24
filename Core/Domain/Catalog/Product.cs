@@ -367,6 +367,11 @@ namespace Core.Domain.Catalog
         /// </summary>
         public decimal ProductCost { get; set; }
         /// <summary>
+        /// Gets or sets the product special price
+        /// </summary>
+        public decimal? SpecialPrice { get; set; }
+
+        /// <summary>
         /// Gets or sets a value indicating whether a customer enters price
         /// </summary>
         public bool CustomerEntersPrice { get; set; }
