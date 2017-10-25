@@ -264,17 +264,230 @@ namespace Services.Catalog
 
         public IList<string> GenerateAllCombinations(Product product, bool ignoreNonCombinableAttributes = false)
         {
-            throw new NotImplementedException();
+            if (product == null)
+                throw new ArgumentNullException("product");
+
+            var allProductAttributMappings = _productAttributeService.GetProductAttributeMappingsByProductId(product.Id);
+            if (ignoreNonCombinableAttributes)
+            {
+                allProductAttributMappings = allProductAttributMappings.Where(x => !x.IsNonCombinable()).ToList();
+            }
+
+            var allPossibleAttributeCombinations = new List<List<ProductAttributeMapping>>();
+            for (int counter = 0; counter < (1 << allProductAttributMappings.Count); ++counter)
+            {
+                var combination = new List<ProductAttributeMapping>();
+                for (int i = 0; i < allProductAttributMappings.Count; ++i)
+                {
+                    if ((counter & (1 << i)) == 0)
+                    {
+                        combination.Add(allProductAttributMappings[i]);
+                    }
+                }
+
+                allPossibleAttributeCombinations.Add(combination);
+            }
+
+            var allAttributesXml = new List<string>();
+            foreach (var combination in allPossibleAttributeCombinations)
+            {
+                var attributesXml = new List<string>();
+                foreach (var pam in combination)
+                {
+                    if (!pam.ShouldHaveValues())
+                        continue;
+
+                    var attributeValues = _productAttributeService.GetProductAttributeValues(pam.Id);
+                    if (!attributeValues.Any())
+                        continue;
+
+                    //checkboxes could have several values ticked
+                    var allPossibleCheckboxCombinations = new List<List<ProductAttributeValue>>();
+                    if (pam.AttributeControlType == AttributeControlType.Checkboxes ||
+                        pam.AttributeControlType == AttributeControlType.ReadonlyCheckboxes)
+                    {
+                        for (int counter = 0; counter < (1 << attributeValues.Count); ++counter)
+                        {
+                            var checkboxCombination = new List<ProductAttributeValue>();
+                            for (int i = 0; i < attributeValues.Count; ++i)
+                            {
+                                if ((counter & (1 << i)) == 0)
+                                {
+                                    checkboxCombination.Add(attributeValues[i]);
+                                }
+                            }
+
+                            allPossibleCheckboxCombinations.Add(checkboxCombination);
+                        }
+                    }
+
+                    if (!attributesXml.Any())
+                    {
+                        //first set of values
+                        if (pam.AttributeControlType == AttributeControlType.Checkboxes ||
+                            pam.AttributeControlType == AttributeControlType.ReadonlyCheckboxes)
+                        {
+                            //checkboxes could have several values ticked
+                            foreach (var checkboxCombination in allPossibleCheckboxCombinations)
+                            {
+                                var tmp1 = "";
+                                foreach (var checkboxValue in checkboxCombination)
+                                {
+                                    tmp1 = AddProductAttribute(tmp1, pam, checkboxValue.Id.ToString());
+                                }
+                                if (!String.IsNullOrEmpty(tmp1))
+                                {
+                                    attributesXml.Add(tmp1);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            //other attribute types (dropdownlist, radiobutton, color squares)
+                            foreach (var attributeValue in attributeValues)
+                            {
+                                var tmp1 = AddProductAttribute("", pam, attributeValue.Id.ToString());
+                                attributesXml.Add(tmp1);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        //next values. let's "append" them to already generated attribute combinations in XML format
+                        var attributesXmlTmp = new List<string>();
+                        if (pam.AttributeControlType == AttributeControlType.Checkboxes ||
+                            pam.AttributeControlType == AttributeControlType.ReadonlyCheckboxes)
+                        {
+                            //checkboxes could have several values ticked
+                            foreach (var str1 in attributesXml)
+                            {
+                                foreach (var checkboxCombination in allPossibleCheckboxCombinations)
+                                {
+                                    var tmp1 = str1;
+                                    foreach (var checkboxValue in checkboxCombination)
+                                    {
+                                        tmp1 = AddProductAttribute(tmp1, pam, checkboxValue.Id.ToString());
+                                    }
+                                    if (!String.IsNullOrEmpty(tmp1))
+                                    {
+                                        attributesXmlTmp.Add(tmp1);
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            //other attribute types (dropdownlist, radiobutton, color squares)
+                            foreach (var attributeValue in attributeValues)
+                            {
+                                foreach (var str1 in attributesXml)
+                                {
+                                    var tmp1 = AddProductAttribute(str1, pam, attributeValue.Id.ToString());
+                                    attributesXmlTmp.Add(tmp1);
+                                }
+                            }
+                        }
+                        attributesXml.Clear();
+                        attributesXml.AddRange(attributesXmlTmp);
+                    }
+                }
+                allAttributesXml.AddRange(attributesXml);
+            }
+
+            //validate conditional attributes (if specified)
+            //minor workaround:
+            //once it's done (validation), then we could have some duplicated combinations in result
+            //we don't remove them here (for performance optimization) because anyway it'll be done in the "GenerateAllAttributeCombinations" method of ProductController
+            for (int i = 0; i < allAttributesXml.Count; i++)
+            {
+                var attributesXml = allAttributesXml[i];
+                foreach (var attribute in allProductAttributMappings)
+                {
+                    var conditionMet = IsConditionMet(attribute, attributesXml);
+                    if (conditionMet.HasValue && !conditionMet.Value)
+                    {
+                        allAttributesXml[i] = RemoveProductAttribute(attributesXml, attribute);
+                    }
+                }
+            }
+            return allAttributesXml;
         }
 
         public void GetGiftCardAttribute(string attributesXml, out string recipientName, out string recipientEmail, out string senderName, out string senderEmail, out string giftCardMessage)
         {
-            throw new NotImplementedException();
+            recipientName = string.Empty;
+            recipientEmail = string.Empty;
+            senderName = string.Empty;
+            senderEmail = string.Empty;
+            giftCardMessage = string.Empty;
+
+            try
+            {
+                var xmlDoc = new XmlDocument();
+                xmlDoc.LoadXml(attributesXml);
+
+                var recipientNameElement = (XmlElement)xmlDoc.SelectSingleNode(@"//Attributes/GiftCardInfo/RecipientName");
+                var recipientEmailElement = (XmlElement)xmlDoc.SelectSingleNode(@"//Attributes/GiftCardInfo/RecipientEmail");
+                var senderNameElement = (XmlElement)xmlDoc.SelectSingleNode(@"//Attributes/GiftCardInfo/SenderName");
+                var senderEmailElement = (XmlElement)xmlDoc.SelectSingleNode(@"//Attributes/GiftCardInfo/SenderEmail");
+                var messageElement = (XmlElement)xmlDoc.SelectSingleNode(@"//Attributes/GiftCardInfo/Message");
+
+                if (recipientNameElement != null)
+                    recipientName = recipientNameElement.InnerText;
+                if (recipientEmailElement != null)
+                    recipientEmail = recipientEmailElement.InnerText;
+                if (senderNameElement != null)
+                    senderName = senderNameElement.InnerText;
+                if (senderEmailElement != null)
+                    senderEmail = senderEmailElement.InnerText;
+                if (messageElement != null)
+                    giftCardMessage = messageElement.InnerText;
+            }
+            catch (Exception exc)
+            {
+                Debug.Write(exc.ToString());
+            }
         }
 
         public bool? IsConditionMet(ProductAttributeMapping pam, string selectedAttributesXml)
         {
-            throw new NotImplementedException();
+            if (pam == null)
+                throw new ArgumentNullException("pam");
+
+            var conditionAttributeXml = pam.ConditionAttributeXml;
+            if (String.IsNullOrEmpty(conditionAttributeXml))
+                //no condition
+                return null;
+
+            //load an attribute this one depends on
+            var dependOnAttribute = ParseProductAttributeMappings(conditionAttributeXml).FirstOrDefault();
+            if (dependOnAttribute == null)
+                return true;
+
+            var valuesThatShouldBeSelected = ParseValues(conditionAttributeXml, dependOnAttribute.Id)
+                //a workaround here:
+                //ConditionAttributeXml can contain "empty" values (nothing is selected)
+                //but in other cases (like below) we do not store empty values
+                //that's why we remove empty values here
+                .Where(x => !String.IsNullOrEmpty(x))
+                .ToList();
+            var selectedValues = ParseValues(selectedAttributesXml, dependOnAttribute.Id);
+            if (valuesThatShouldBeSelected.Count != selectedValues.Count)
+                return false;
+
+            //compare values
+            var allFound = true;
+            foreach (var t1 in valuesThatShouldBeSelected)
+            {
+                bool found = false;
+                foreach (var t2 in selectedValues)
+                    if (t1 == t2)
+                        found = true;
+                if (!found)
+                    allFound = false;
+            }
+
+            return allFound;
         }
 
         public IList<ProductAttributeMapping> ParseProductAttributeMappings(string attributesXml)

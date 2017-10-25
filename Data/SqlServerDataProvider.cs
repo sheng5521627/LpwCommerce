@@ -78,6 +78,11 @@ namespace Data
             }
         }
 
+        public virtual bool BackupSupported
+        {
+            get { return true; }
+        }
+
         public DbParameter GetParameter()
         {
             return new SqlParameter();

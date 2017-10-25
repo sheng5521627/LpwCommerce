@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Entity;
+using System.Data.Entity.Core.EntityClient;
 using System.Data.Entity.Core.Metadata.Edm;
 using System.Data.Entity.Infrastructure;
 using System.Linq;
@@ -171,6 +172,58 @@ namespace Data
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Get maximum decimal values
+        /// </summary>
+        /// <param name="context">Context</param>
+        /// <param name="entityTypeName">Entity type name</param>
+        /// <param name="columnNames">Column names</param>
+        /// <returns></returns>
+        public static IDictionary<string, decimal> GetDecimalMaxValue(this IDbContext context, string entityTypeName, params string[] columnNames)
+        {
+            var fildFacets = GetFildFacets(context, entityTypeName, "Decimal", columnNames);
+
+            return fildFacets.ToDictionary(p => p.Key, p => int.Parse(p.Value["Precision"].Value.ToString()) - int.Parse(p.Value["Scale"].Value.ToString()))
+                .ToDictionary(p => p.Key, p => new decimal(Math.Pow(10, p.Value)));
+        }
+
+        private static Dictionary<string, ReadOnlyMetadataCollection<Facet>> GetFildFacets(this IDbContext context,
+            string entityTypeName, string edmTypeName, params string[] columnNames)
+        {
+            //original: http://stackoverflow.com/questions/5081109/entity-framework-4-0-automatically-truncate-trim-string-before-insert
+
+            var entType = Type.GetType(entityTypeName);
+            var adapter = ((IObjectContextAdapter)context).ObjectContext;
+            var metadataWorkspace = adapter.MetadataWorkspace;
+            var q = from meta in metadataWorkspace.GetItems(DataSpace.CSpace).Where(m => m.BuiltInTypeKind == BuiltInTypeKind.EntityType)
+                    from p in (meta as EntityType).Properties.Where(p => columnNames.Contains(p.Name) && p.TypeUsage.EdmType.Name == edmTypeName)
+                    select p;
+
+            var queryResult = q.Where(p =>
+            {
+                var match = p.DeclaringType.Name == entityTypeName;
+                if (!match && entType != null)
+                {
+                    //Is a fully qualified name....
+                    match = entType.Name == p.DeclaringType.Name;
+                }
+
+                return match;
+
+            }).ToDictionary(p => p.Name, p => p.TypeUsage.Facets);
+
+            return queryResult;
+        }
+
+        public static string DbName(this IDbContext context)
+        {
+            var connection = ((IObjectContextAdapter)context).ObjectContext.Connection as EntityConnection;
+            if (connection == null)
+                return string.Empty;
+
+            return connection.StoreConnection.Database;
         }
     }
 }

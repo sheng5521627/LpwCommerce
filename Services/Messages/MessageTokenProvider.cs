@@ -19,6 +19,11 @@ using Services.Directory;
 using Core;
 using Services.Media;
 using Services.Catalog;
+using Services.Stores;
+using Core.Domain.Tax;
+using Core.Domain.Directory;
+using Services.Common;
+using Services.Events;
 
 namespace Services.Messages
 {

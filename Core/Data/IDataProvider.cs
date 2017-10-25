@@ -30,6 +30,11 @@ namespace Core.Data
         bool StoredProceduredSupported { get; }
 
         /// <summary>
+        /// A value indicating whether this data provider supports backup
+        /// </summary>
+        bool BackupSupported { get; }
+
+        /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>

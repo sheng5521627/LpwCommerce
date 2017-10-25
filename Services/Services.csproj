@@ -42,6 +42,10 @@
       <HintPath>..\packages\ImageResizer.Plugins.PrettyGifs.4.1.10\lib\net45\ImageResizer.Plugins.PrettyGifs.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="itextsharp, Version=5.5.12.0, Culture=neutral, PublicKeyToken=8354ae6d2174ddca, processorArchitecture=MSIL">
+      <HintPath>..\packages\iTextSharp.5.5.12\lib\itextsharp.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="MaxMind.Db, Version=2.0.0.0, Culture=neutral, PublicKeyToken=66afa4cc5ae853ac, processorArchitecture=MSIL">
       <HintPath>..\packages\MaxMind.Db.2.2.0\lib\net45\MaxMind.Db.dll</HintPath>
       <Private>True</Private>
@@ -119,15 +123,37 @@
     <Compile Include="Catalog\ProductAttributeService.cs" />
     <Compile Include="Catalog\ProductService.cs" />
     <Compile Include="Catalog\RoundingHelper.cs" />
+    <Compile Include="Common\AddressAttributeExtensions.cs" />
+    <Compile Include="Common\AddressAttributeFormatter.cs" />
+    <Compile Include="Common\AddressAttributeParser.cs" />
+    <Compile Include="Common\AddressAttributeService.cs" />
+    <Compile Include="Common\AddressExtensions.cs" />
+    <Compile Include="Common\AddressService.cs" />
+    <Compile Include="Common\FulltextService.cs" />
     <Compile Include="Common\GenericAttributeExtensions.cs" />
     <Compile Include="Common\GenericAttributeService.cs" />
+    <Compile Include="Common\IAddressAttributeFormatter.cs" />
+    <Compile Include="Common\IAddressAttributeParser.cs" />
+    <Compile Include="Common\IAddressAttributeService.cs" />
+    <Compile Include="Common\IAddressService.cs" />
+    <Compile Include="Common\IFulltextService.cs" />
     <Compile Include="Common\IGenericAttributeService.cs" />
+    <Compile Include="Common\IMaintenanceService.cs" />
+    <Compile Include="Common\IMiscPlugin.cs" />
+    <Compile Include="Common\IPdfService.cs" />
+    <Compile Include="Common\ISearchTermService.cs" />
+    <Compile Include="Common\KeepAliveTask.cs" />
+    <Compile Include="Common\MaintenanceService.cs" />
+    <Compile Include="Common\PdfService.cs" />
+    <Compile Include="Common\SearchTermService.cs" />
     <Compile Include="Configuration\ISettingService.cs" />
     <Compile Include="Configuration\SettingExtensions.cs" />
     <Compile Include="Configuration\SettingService.cs" />
+    <Compile Include="Customers\Cache\CustomerCacheEventConsumer.cs" />
     <Compile Include="Customers\ChangePasswordRequest.cs" />
     <Compile Include="Customers\ChangePasswordResult.cs" />
     <Compile Include="Customers\CustomerAttributeExtensions.cs" />
+    <Compile Include="Customers\CustomerAttributeFormatter.cs" />
     <Compile Include="Customers\CustomerAttributeParser.cs" />
     <Compile Include="Customers\CustomerAttributeService.cs" />
     <Compile Include="Customers\CustomerExtensions.cs" />
@@ -137,6 +163,7 @@
     <Compile Include="Customers\CustomerReportService.cs" />
     <Compile Include="Customers\CustomerService.cs" />
     <Compile Include="Customers\DeleteGuestsTask.cs" />
+    <Compile Include="Customers\ICustomerAttributeFormatter.cs" />
     <Compile Include="Customers\ICustomerAttributeParser.cs" />
     <Compile Include="Customers\ICustomerAttributeService.cs" />
     <Compile Include="Customers\ICustomerRegistrationService.cs" />
@@ -192,12 +219,16 @@
     <Compile Include="Messages\CampaignService.cs" />
     <Compile Include="Messages\EmailAccountService.cs" />
     <Compile Include="Messages\EmailSender.cs" />
+    <Compile Include="Messages\EventPublisherExtensions.cs" />
     <Compile Include="Messages\ICampaignService.cs" />
     <Compile Include="Messages\IEmailAccountService.cs" />
     <Compile Include="Messages\IEmailSender.cs" />
     <Compile Include="Messages\IMessageTokenProvider.cs" />
+    <Compile Include="Messages\INewsLetterSubscriptionService.cs" />
     <Compile Include="Messages\ITokenizer.cs" />
+    <Compile Include="Messages\IWorkflowMessageService.cs" />
     <Compile Include="Messages\MessageTokenProvider.cs" />
+    <Compile Include="Messages\NewsLetterSubscriptionService.cs" />
     <Compile Include="Messages\Token.cs" />
     <Compile Include="Messages\Tokenizer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
