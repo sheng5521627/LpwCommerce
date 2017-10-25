@@ -8,6 +8,7 @@ namespace Core.Domain.Catalog
 {
     /// <summary>
     /// Represents a product attribute combination
+    /// 产品属性组合
     /// </summary>
     public partial class ProductAttributeCombination : BaseEntity
     {

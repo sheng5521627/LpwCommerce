@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Core.Domain.Directory
 {
     /// <summary>
-    /// Represents an exchange rate
+    /// Represents an exchange rate(汇率)
     /// </summary>
     public partial class ExchangeRate
     {

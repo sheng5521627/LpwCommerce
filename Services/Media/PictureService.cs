@@ -487,7 +487,10 @@ namespace Services.Media
 
         public Picture GetPictureById(int pictureId)
         {
-            throw new NotImplementedException();
+            if (pictureId == 0)
+                return null;
+
+            return _pictureRepository.GetById(pictureId);
         }
 
         public IPagedList<Picture> GetPictures(int pageIndex = 0, int pageSize = int.MaxValue)
@@ -499,14 +502,32 @@ namespace Services.Media
             return new PagedList<Picture>(query, pageIndex, pageSize);
         }
 
+        /// <summary>
+        /// Gets pictures by product identifier
+        /// </summary>
+        /// <param name="productId">Product identifier</param>
+        /// <param name="recordsToReturn">Number of records to return. 0 if you want to get all items</param>
+        /// <returns>Pictures</returns>
         public IList<Picture> GetPicturesByProductId(int productId, int recordsToReturn = 0)
         {
-            throw new NotImplementedException();
+            if (productId == 0)
+                return new List<Picture>();
+
+            var query = from p in _pictureRepository.Table
+                        join pp in _productPictureRepository.Table on p.Id equals pp.PictureId
+                        orderby pp.DisplayOrder
+                        where pp.PictureId == productId
+                        select p;
+
+            if (recordsToReturn > 0)
+                query = query.Take(recordsToReturn);
+
+            return query.ToList();
         }
 
         public string GetPictureSeName(string name)
         {
-            throw new NotImplementedException();
+            return SeoExtensions.GetSeName(name, true, false);
         }
 
         public string GetPictureUrl(Picture picture, int targetSize = 0, bool showDefaultPicture = true, string storeLocation = null, PictureType defaultPictureType = PictureType.Entity)
@@ -612,12 +633,38 @@ namespace Services.Media
 
         public string GetThumbLocalPath(Picture picture, int targetSize = 0, bool showDefaultPicture = true)
         {
-            throw new NotImplementedException();
+            string url = GetPictureUrl(picture, targetSize, showDefaultPicture);
+            if (string.IsNullOrEmpty(url))
+                return string.Empty;
+
+            return GetThumbLocalPath(Path.GetFileName(url));
         }
 
         public Picture InsertPicture(byte[] pictureBinary, string mimeType, string seoFilename, string altAttribute = null, string titleAttribute = null, bool isNew = true, bool validateBinary = true)
         {
-            throw new NotImplementedException();
+            mimeType = CommonHelper.EnsureNotNull(mimeType);
+            mimeType = CommonHelper.EnsureMaximumLength(mimeType, 20);
+
+            seoFilename = CommonHelper.EnsureMaximumLength(seoFilename, 100);
+
+            if (validateBinary)
+                pictureBinary = ValidatePicture(pictureBinary, mimeType);
+
+            var picture = new Picture()
+            {
+                PictureBinary = this.StoreInDb ? pictureBinary : new byte[0],
+                MimeType = mimeType,
+                SeoFilename = seoFilename,
+                AltAttribute = altAttribute,
+                TitleAttribute = titleAttribute,
+                IsNew = isNew
+            };
+
+            _pictureRepository.Insert(picture);
+
+            _eventPublisher.EntityInserted(picture);
+
+            return picture;
         }
 
         public byte[] LoadPictureBinary(Picture picture)
@@ -627,17 +674,82 @@ namespace Services.Media
 
         public Picture SetSeoFilename(int pictureId, string seoFilename)
         {
-            throw new NotImplementedException();
+            var picture = GetPictureById(pictureId);
+            if (picture == null)
+                throw new ArgumentException("No picture found with the specified id");
+
+            //update if it has been changed
+            if (seoFilename != picture.SeoFilename)
+            {
+                //update picture
+                picture = UpdatePicture(picture.Id,
+                    LoadPictureBinary(picture),
+                    picture.MimeType,
+                    seoFilename,
+                    picture.AltAttribute,
+                    picture.TitleAttribute,
+                    true,
+                    false);
+            }
+            return picture;
         }
 
-        public Picture UpdatePicture(int pictureId, byte[] pictureBinary, string mimeType, string seoFilename, string altAttribute = null, string titleAttribute = null, bool isNew = true, bool validateBinary = true)
+        public Picture UpdatePicture(int pictureId, byte[] pictureBinary, string mimeType, string seoFilename, 
+            string altAttribute = null, string titleAttribute = null, 
+            bool isNew = true, bool validateBinary = true)
         {
-            throw new NotImplementedException();
+            mimeType = CommonHelper.EnsureNotNull(mimeType);
+            mimeType = CommonHelper.EnsureMaximumLength(mimeType, 20);
+
+            seoFilename = CommonHelper.EnsureMaximumLength(seoFilename, 100);
+
+            if (validateBinary)
+                pictureBinary = ValidatePicture(pictureBinary, mimeType);
+
+            var picture = GetPictureById(pictureId);
+            if (picture == null)
+                return null;
+
+            //delete old thumbs if a picture has been changed
+            if (seoFilename != picture.SeoFilename)
+                DeletePictureThumbs(picture);
+
+            picture.PictureBinary = this.StoreInDb ? pictureBinary : new byte[0];
+            picture.MimeType = mimeType;
+            picture.SeoFilename = seoFilename;
+            picture.AltAttribute = altAttribute;
+            picture.TitleAttribute = titleAttribute;
+            picture.IsNew = isNew;
+
+            _pictureRepository.Update(picture);
+
+            if (!this.StoreInDb)
+                SavePictureInFile(picture.Id, pictureBinary, mimeType);
+
+            //event notification
+            _eventPublisher.EntityUpdated(picture);
+
+            return picture;
         }
 
+        /// <summary>
+        /// Validates input picture dimensions
+        /// </summary>
+        /// <param name="pictureBinary">Picture binary</param>
+        /// <param name="mimeType">MIME type</param>
+        /// <returns>Picture binary or throws an exception</returns>
         public byte[] ValidatePicture(byte[] pictureBinary, string mimeType)
         {
-            throw new NotImplementedException();
+            using (var destStream = new MemoryStream())
+            {
+                ImageBuilder.Current.Build(pictureBinary, destStream, new ResizeSettings
+                {
+                    MaxWidth = _mediaSettings.MaximumImageSize,
+                    MaxHeight = _mediaSettings.MaximumImageSize,
+                    Quality = _mediaSettings.DefaultImageQuality
+                });
+                return destStream.ToArray();
+            }
         }
     }
 }

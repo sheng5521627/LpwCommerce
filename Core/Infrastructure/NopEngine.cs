@@ -18,7 +18,7 @@ namespace Core.Infrastructure
         /// <summary>
         /// 
         /// </summary>
-        public ContainerManager ContainnerManager
+        public ContainerManager ContainerManager
         {
             get
             {
@@ -75,7 +75,7 @@ namespace Core.Infrastructure
         /// <returns></returns>
         public object Resolve(Type type)
         {
-            return ContainnerManager.Resolve(type);
+            return ContainerManager.Resolve(type);
         }
 
         /// <summary>
@@ -85,7 +85,7 @@ namespace Core.Infrastructure
         /// <returns></returns>
         public T Resolve<T>() where T : class
         {
-            return ContainnerManager.Resolve<T>();
+            return ContainerManager.Resolve<T>();
         }
 
         /// <summary>
@@ -95,7 +95,7 @@ namespace Core.Infrastructure
         /// <returns></returns>
         public T[] ResolveAll<T>()
         {
-            return ContainnerManager.ResolveAll<T>();
+            return ContainerManager.ResolveAll<T>();
         }
     }
 }

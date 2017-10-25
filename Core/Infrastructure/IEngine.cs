@@ -16,7 +16,7 @@ namespace Core.Infrastructure
         /// <summary>
         /// 依赖注入容器管理
         /// </summary>
-        ContainerManager ContainnerManager { get; }
+        ContainerManager ContainerManager { get; }
 
         /// <summary>
         /// 组件和插件初始化

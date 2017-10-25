@@ -4,11 +4,21 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Core.Domain.Messages;
+using Core.Data;
 
 namespace Services.Messages
 {
     public partial class CampaignService : ICampaignService
     {
+        private readonly IRepository<Campaign> _campaignRepository;
+        private readonly IEmailSender _emailSender;
+        private readonly IMessageTokenProvider _messageTokenProvider;
+        private readonly ITokenizer _tokenizer;
+        private readonly IQueuedEmailService _queuedEmailService;
+        private readonly ICustomerService _customerService;
+        private readonly IStoreContext _storeContext;
+        private readonly IEventPublisher _eventPublisher;
+
         public void DeleteCampaign(Campaign campaign)
         {
             throw new NotImplementedException();

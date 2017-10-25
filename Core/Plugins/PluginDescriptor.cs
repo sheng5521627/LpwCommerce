@@ -101,9 +101,9 @@ namespace Core.Plugins
         public virtual T Instance<T>() where T : class, IPlugin
         {
             object instance;
-            if (!EngineContext.Current.ContainnerManager.TryResolve(PluginType, null, out instance))
+            if (!EngineContext.Current.ContainerManager.TryResolve(PluginType, null, out instance))
             {
-                instance = EngineContext.Current.ContainnerManager.ResolveUnregistered(PluginType);
+                instance = EngineContext.Current.ContainerManager.ResolveUnregistered(PluginType);
             }
 
             var typedInstance = instance as T;

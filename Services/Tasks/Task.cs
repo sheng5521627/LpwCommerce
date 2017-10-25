@@ -80,9 +80,9 @@ namespace Services.Tasks
                 if (type != null)
                 {
                     object instance;
-                    if (!EngineContext.Current.ContainnerManager.TryResolve(type, scope, out instance))
+                    if (!EngineContext.Current.ContainerManager.TryResolve(type, scope, out instance))
                     {
-                        instance = EngineContext.Current.ContainnerManager.ResolveUnregistered(type, scope);
+                        instance = EngineContext.Current.ContainerManager.ResolveUnregistered(type, scope);
                     }
                     task = instance as ITask;
                 }
@@ -102,17 +102,17 @@ namespace Services.Tasks
             //because scope is generated each time it's requested
             //that's why we get one single scope here
             //this way we can also dispose resources once a task is completed
-            var scope = EngineContext.Current.ContainnerManager.Scope();
-            var scheduleTaskService = EngineContext.Current.ContainnerManager.Resolve<IScheduleTaskService>("", scope);
+            var scope = EngineContext.Current.ContainerManager.Scope();
+            var scheduleTaskService = EngineContext.Current.ContainerManager.Resolve<IScheduleTaskService>("", scope);
             var scheduleTask = scheduleTaskService.GetTaskByType(this.Type);
             try
             {
                 if (ensureRunOnOneWebFarmInstance)
                 {
-                    var nopConfig = EngineContext.Current.ContainnerManager.Resolve<NopConfig>("", scope);
+                    var nopConfig = EngineContext.Current.ContainerManager.Resolve<NopConfig>("", scope);
                     if (nopConfig.MultipleInstancesEnabled)
                     {
-                        var machineNameProvider = EngineContext.Current.ContainnerManager.Resolve<IMachineNameProvider>("", scope);
+                        var machineNameProvider = EngineContext.Current.ContainerManager.Resolve<IMachineNameProvider>("", scope);
                         var machineName = machineNameProvider.GetMachineName();
                         if (string.IsNullOrEmpty(machineName))
                         {
@@ -143,7 +143,7 @@ namespace Services.Tasks
             {
                 this.Enabled = !this.StopOnError;
                 this.LastEndUtc = DateTime.UtcNow;
-                var logger = EngineContext.Current.ContainnerManager.Resolve<ILogger>("", scope);
+                var logger = EngineContext.Current.ContainerManager.Resolve<ILogger>("", scope);
                 logger.Error(string.Format("Error while running the '{0}' schedule task. {1}", this.Name, exc.Message), exc);
                 if (throwException)
                     throw;

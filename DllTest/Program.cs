@@ -1,4 +1,6 @@
 ﻿using ImageResizer;
+using MaxMind.GeoIP2;
+using MaxMind.GeoIP2.Responses;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -13,24 +15,9 @@ namespace DllTest
     {
         static void Main(string[] args)
         {
-            string s1 = Guid.NewGuid().ToString();
-            string s2 = Guid.NewGuid().ToString();
-            string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "1.jpg");
-            using (var b = new Bitmap(path))
-            {
-                using (var destStream = new MemoryStream())
-                {                    
-                    ImageBuilder.Current.Build(b, destStream, new ResizeSettings
-                    {
-                        Width = 200,
-                        Height = 200,
-                        Scale = ScaleMode.Both,
-                        Quality = 100
-                    });
-                    var destBinary = destStream.ToArray();
-                    File.WriteAllBytes(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "2.jpg"), destBinary);
-                }
-            }
+            string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "GeoLite2-Country.mmdb");
+            var reader = new DatabaseReader(path);
+            var country = reader.Country("183.38.246.15");
         }
     }
 }

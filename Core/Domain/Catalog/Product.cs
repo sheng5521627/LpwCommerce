@@ -218,7 +218,7 @@ namespace Core.Domain.Catalog
         public int RecurringTotalCycles { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether the product is rental
+        /// Gets or sets a value indicating whether the product is rental(租金)
         /// </summary>
         public bool IsRental { get; set; }
         /// <summary>
