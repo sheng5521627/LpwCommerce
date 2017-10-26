@@ -32,7 +32,7 @@ namespace Core.Domain.Discounts
         /// </summary>
         AssignedToShipping = 10,
         /// <summary>
-        /// Assigned to order subtotal
+        /// Assigned to order subtotal 求和
         /// </summary>
         AssignedToOrderSubTotal = 20,
     }

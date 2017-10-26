@@ -64,7 +64,7 @@ namespace Core.Domain.Discounts
         public bool RequiresCouponCode { get; set; }
 
         /// <summary>
-        /// Gets or sets the coupon code
+        /// Gets or sets the coupon code(优惠码)
         /// </summary>
         public string CouponCode { get; set; }
 

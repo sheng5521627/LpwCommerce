@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Services.Events
 {
     /// <summary>
-    /// 时间发布者
+    /// 事件发布者
     /// </summary>
     public interface IEventPublisher
     {

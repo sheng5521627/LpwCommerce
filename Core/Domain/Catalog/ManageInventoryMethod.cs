@@ -13,14 +13,17 @@ namespace Core.Domain.Catalog
     {
         /// <summary>
         /// Don't track inventory for product
+        /// 不要跟踪产品的库存
         /// </summary>
         DontManageStock = 0,
         /// <summary>
         /// Track inventory for product
+        /// 产品跟踪库存
         /// </summary>
         ManageStock = 1,
         /// <summary>
         /// Track inventory for product by product attributes
+        /// 按产品属性跟踪产品库存
         /// </summary>
         ManageStockByAttributes = 2,
     }

@@ -8,6 +8,7 @@ namespace Core.Domain.Tax
 {
     /// <summary>
     /// Represents the VAT number status enumeration
+    /// 表示增值数字状态枚举。
     /// </summary>
     public enum VatNumberStatus
     {

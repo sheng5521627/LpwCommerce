@@ -127,7 +127,7 @@ namespace Services.Localization
 
             _localizedPropertyRepository.Delete(localizedProperty);
 
-            _cacheManager.RemoveByPattern(LOCALIZEDPROPERTY_PATTERN_KEY);           
+            _cacheManager.RemoveByPattern(LOCALIZEDPROPERTY_PATTERN_KEY);
         }
 
         public LocalizedProperty GetLocalizedPropertyById(int localizedPropertyId)
@@ -143,7 +143,7 @@ namespace Services.Localization
             if (_localizationSettings.LoadAllLocalizedPropertiesOnStartup)
             {
                 string key = string.Format(LOCALIZEDPROPERTY_KEY, languageId, entityId, localeKeyGroup, localeKey);
-                return _cacheManager.Get(key, () => 
+                return _cacheManager.Get(key, () =>
                 {
                     var source = GetAllLocalizedPropertiesCached();
                     var query = from lp in source
@@ -186,7 +186,7 @@ namespace Services.Localization
             SaveLocalizedValue<T, string>(entity, keySelector, localeValue, languageId);
         }
 
-        public void SaveLocalizedValue<T, TProType>(T entity, Expression<Func<T, TProType>> keySelector, string localeValue, int languageId) where T : BaseEntity, ILocalizedEntity
+        public void SaveLocalizedValue<T, TPropType>(T entity, Expression<Func<T, TPropType>> keySelector, TPropType localeValue, int languageId) where T : BaseEntity, ILocalizedEntity
         {
             if (entity == null)
                 throw new ArgumentNullException("entity");
@@ -199,7 +199,7 @@ namespace Services.Localization
                 throw new ArgumentException(string.Format("表达式{0}应为属性或字段的访问器", keySelector));
 
             var proInfo = member.Member as PropertyInfo;
-            if(proInfo == null)
+            if (proInfo == null)
                 throw new ArgumentException(string.Format("表达式{0}应为属性或字段的访问器", keySelector));
 
             string localeKeyGroup = typeof(T).Name;
@@ -209,7 +209,7 @@ namespace Services.Localization
 
             var localeValueStr = CommonHelper.To<string>(localeValue);
 
-            if(prop != null)
+            if (prop != null)
             {
                 if (string.IsNullOrWhiteSpace(localeValueStr))
                 {

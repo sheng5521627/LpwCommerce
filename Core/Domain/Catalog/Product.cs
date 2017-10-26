@@ -372,6 +372,16 @@ namespace Core.Domain.Catalog
         public decimal? SpecialPrice { get; set; }
 
         /// <summary>
+        /// Gets or sets the start date and time of the special price
+        /// </summary>
+        public DateTime? SpecialPriceStartDateTimeUtc { get; set; }
+
+        /// <summary>
+        /// Gets or sets the end date and time of the special price
+        /// </summary>
+        public DateTime? SpecialPriceEndDateTimeUtc { get; set; }
+
+        /// <summary>
         /// Gets or sets a value indicating whether a customer enters price
         /// </summary>
         public bool CustomerEntersPrice { get; set; }
@@ -567,7 +577,7 @@ namespace Core.Domain.Catalog
         }
 
         /// <summary>
-        /// Gets or sets the value indicating how to manage inventory
+        /// Gets or sets the value indicating how to manage inventory(库存)
         /// </summary>
         public ManageInventoryMethod ManageInventoryMethod
         {

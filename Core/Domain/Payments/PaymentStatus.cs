@@ -12,27 +12,27 @@ namespace Core.Domain.Payments
     public enum PaymentStatus
     {
         /// <summary>
-        /// Pending
+        /// Pending 待定的
         /// </summary>
         Pending = 10,
         /// <summary>
-        /// Authorized
+        /// Authorized 审批
         /// </summary>
         Authorized = 20,
         /// <summary>
-        /// Paid
+        /// Paid 支付
         /// </summary>
         Paid = 30,
         /// <summary>
-        /// Partially Refunded
+        /// Partially Refunded 部分退款
         /// </summary>
         PartiallyRefunded = 35,
         /// <summary>
-        /// Refunded
+        /// Refunded 退款
         /// </summary>
         Refunded = 40,
         /// <summary>
-        /// Voided
+        /// Voided 作废
         /// </summary>
         Voided = 50,
     }

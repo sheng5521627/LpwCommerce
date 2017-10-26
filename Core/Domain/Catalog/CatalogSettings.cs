@@ -33,6 +33,11 @@ namespace Core.Domain.Catalog
         public bool PublishBackProductWhenCancellingOrders { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether to display product SKU
+        /// </summary>
+        public bool ShowProductSku { get; set; }
+
+        /// <summary>
         /// Gets or sets a value indicating whether to display product SKU on the product details page
         /// </summary>
         public bool ShowSkuOnProductDetailsPage { get; set; }

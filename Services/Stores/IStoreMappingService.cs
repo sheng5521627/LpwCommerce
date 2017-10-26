@@ -25,7 +25,7 @@ namespace Services.Stores
         void UpdateStoreMapping(StoreMapping storeMapping);
 
         int[] GetStoreIdsWithAccess<T>(T entity) where T : BaseEntity, IStoreMappingSupported;
-
+        
         bool Authorize<T>(T entity) where T : BaseEntity, IStoreMappingSupported;
 
         bool Authorize<T>(T entity, int storeId) where T : BaseEntity, IStoreMappingSupported;
