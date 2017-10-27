@@ -70,7 +70,7 @@ namespace Core.Html
         /// Formats the text
         /// </summary>
         /// <param name="text">Text</param>
-        /// <param name="stripTags">A value indicating whether to strip tags</param>
+        /// <param name="stripTags">A value indicating whether to strip tags(带标签)</param>
         /// <param name="convertPlainTextToHtml">A value indicating whether HTML is allowed</param>
         /// <param name="allowHtml">A value indicating whether HTML is allowed</param>
         /// <param name="allowBBCode">A value indicating whether BBCode is allowed</param>

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Core.Domain.Shipping
 {
     /// <summary>
-    /// Shipment sent event
+    /// Shipment sent event(货物发送事件)
     /// </summary>
     public class ShipmentSentEvent
     {
@@ -23,7 +23,7 @@ namespace Core.Domain.Shipping
     }
 
     /// <summary>
-    /// Shipment delivered event
+    /// Shipment delivered(交付) event
     /// </summary>
     public class ShipmentDeliveredEvent
     {

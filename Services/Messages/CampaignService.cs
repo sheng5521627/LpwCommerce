@@ -5,6 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Core.Domain.Messages;
 using Core.Data;
+using Services.Customers;
+using Core;
+using Services.Events;
 
 namespace Services.Messages
 {
@@ -21,37 +24,116 @@ namespace Services.Messages
 
         public void DeleteCampaign(Campaign campaign)
         {
-            throw new NotImplementedException();
+            if (campaign == null)
+                throw new ArgumentNullException("campaign");
+
+            _campaignRepository.Delete(campaign);
+
+            //event notification
+            _eventPublisher.EntityDeleted(campaign);
         }
 
         public IList<Campaign> GetAllCampaigns()
         {
-            throw new NotImplementedException();
+            var query = from c in _campaignRepository.Table
+                        orderby c.CreatedOnUtc
+                        select c;
+            var campaigns = query.ToList();
+
+            return campaigns;
         }
 
         public Campaign GetCampaignById(int campaignId)
         {
-            throw new NotImplementedException();
+            if (campaignId == 0)
+                return null;
+
+            return _campaignRepository.GetById(campaignId);
         }
 
         public void InsertCampaign(Campaign campaign)
         {
-            throw new NotImplementedException();
+            if (campaign == null)
+                throw new ArgumentNullException("campaign");
+
+            _campaignRepository.Insert(campaign);
+
+            //event notification
+            _eventPublisher.EntityInserted(campaign);
         }
 
         public void SendCampaign(Campaign campaign, EmailAccount emailAccount, string email)
         {
-            throw new NotImplementedException();
+            if (campaign == null)
+                throw new ArgumentNullException("campaign");
+
+            if (emailAccount == null)
+                throw new ArgumentNullException("emailAccount");
+
+            var tokens = new List<Token>();
+            _messageTokenProvider.AddStoreTokens(tokens, _storeContext.CurrentStore, emailAccount);
+            var customer = _customerService.GetCustomerByEmail(email);
+            if (customer != null)
+                _messageTokenProvider.AddCustomerTokens(tokens, customer);
+
+            string subject = _tokenizer.Replace(campaign.Subject, tokens, false);
+            string body = _tokenizer.Replace(campaign.Body, tokens, true);
+
+            _emailSender.SendEmail(emailAccount, subject, body, emailAccount.Email, emailAccount.DisplayName, email, null);
         }
 
         public int SendCampaign(Campaign campaign, EmailAccount emailAccount, IEnumerable<NewsLetterSubscription> subscriptions)
         {
-            throw new NotImplementedException();
+            if (campaign == null)
+                throw new ArgumentNullException("campaign");
+
+            if (emailAccount == null)
+                throw new ArgumentNullException("emailAccount");
+
+            int totalEmailsSent = 0;
+
+            foreach (var subscription in subscriptions)
+            {
+                var customer = _customerService.GetCustomerByEmail(subscription.Email);
+                //ignore deleted or inactive customers when sending newsletter campaigns
+                if (customer != null && (!customer.Active || customer.Deleted))
+                    continue;
+
+                var tokens = new List<Token>();
+                _messageTokenProvider.AddStoreTokens(tokens, _storeContext.CurrentStore, emailAccount);
+                _messageTokenProvider.AddNewsLetterSubscriptionTokens(tokens, subscription);
+                if (customer != null)
+                    _messageTokenProvider.AddCustomerTokens(tokens, customer);
+
+                string subject = _tokenizer.Replace(campaign.Subject, tokens, false);
+                string body = _tokenizer.Replace(campaign.Body, tokens, true);
+
+                var email = new QueuedEmail
+                {
+                    Priority = QueuedEmailPriority.Low,
+                    From = emailAccount.Email,
+                    FromName = emailAccount.DisplayName,
+                    To = subscription.Email,
+                    Subject = subject,
+                    Body = body,
+                    CreatedOnUtc = DateTime.UtcNow,
+                    EmailAccountId = emailAccount.Id
+                };
+                _queuedEmailService.InsertQueuedEmail(email);
+                totalEmailsSent++;
+            }
+            return totalEmailsSent;
         }
 
         public void UpdateCampaign(Campaign campaign)
         {
-            throw new NotImplementedException();
+            if (campaign == null)
+                throw new ArgumentNullException("campaign");
+
+            _campaignRepository.Update(campaign);
+
+            //event notification
+            _eventPublisher.EntityUpdated(campaign);
         }
     }
 }

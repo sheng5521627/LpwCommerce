@@ -240,6 +240,7 @@ namespace Core.Domain.Catalog
         public bool IsFreeShipping { get; set; }
         /// <summary>
         /// Gets or sets a value this product should be shipped separately (each item)
+        /// 获取或设置一个值，该产品应单独发货（每个项目）
         /// </summary>
         public bool ShipSeparately { get; set; }
         /// <summary>
@@ -400,6 +401,7 @@ namespace Core.Domain.Catalog
         public bool BasepriceEnabled { get; set; }
         /// <summary>
         /// Gets or sets an amount in product for PAngV
+        /// 获取或设置pangv产品金额
         /// </summary>
         public decimal BasepriceAmount { get; set; }
         /// <summary>

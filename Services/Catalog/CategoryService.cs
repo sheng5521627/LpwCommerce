@@ -427,7 +427,7 @@ namespace Services.Catalog
 
         public void InsertProductCategory(ProductCategory productCategory)
         {
-            f(productCategory == null)
+            if(productCategory == null)
                 throw new ArgumentNullException("productCategory");
 
             _productCategoryRepository.Insert(productCategory);

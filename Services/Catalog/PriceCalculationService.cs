@@ -8,6 +8,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Core.Domain.Customers;
+using Core.Domain.Discounts;
+using Services.Catalog.Cache;
+using Services.Customers;
+using System.Globalization;
 
 namespace Services.Catalog
 {
@@ -54,6 +59,591 @@ namespace Services.Catalog
             this._cacheManager = cacheManager;
             this._shoppingCartSettings = shoppingCartSettings;
             this._catalogSettings = catalogSettings;
+        }
+
+        #region Nested classes
+
+        [Serializable]
+        protected class ProductPriceForCaching
+        {
+            public decimal Price { get; set; }
+            public decimal AppliedDiscountAmount { get; set; }
+            public int AppliedDiscountId { get; set; }
+        }
+        #endregion
+
+        #region Utilities
+        /// <summary>
+        /// Gets allowed discounts applied to product
+        /// </summary>
+        /// <param name="product">Product</param>
+        /// <param name="customer">Customer</param>
+        /// <returns>Discounts</returns>
+        protected virtual IList<Discount> GetAllowedDiscountsAppliedToProduct(Product product, Customer customer)
+        {
+            var allowedDiscounts = new List<Discount>();
+            if (_catalogSettings.IgnoreDiscounts)
+                return allowedDiscounts;
+
+            if (product.HasDiscountsApplied)
+            {
+                //we use this property ("HasDiscountsApplied") for performance optimziation to avoid unnecessary database calls
+                foreach(var discount in product.AppliedDiscounts)
+                {
+                    if(_discountService.ValidateDiscount(discount,customer).IsValid &&
+                       discount.DiscountType == DiscountType.AssignedToSkus &&
+                       !allowedDiscounts.ContainsDiscount(discount))
+                    {
+                        allowedDiscounts.Add(discount);
+                    }
+                }
+            }
+
+            return allowedDiscounts;
+        }
+
+        /// <summary>
+        /// Gets allowed discounts applied to categories
+        /// </summary>
+        /// <param name="product">Product</param>
+        /// <param name="customer">Customer</param>
+        /// <returns>Discounts</returns>
+        protected virtual IList<Discount> GetAllowedDiscountsAppliedToCategories(Product product, Customer customer)
+        {
+            var allowedDiscounts = new List<Discount>();
+            if (_catalogSettings.IgnoreDiscounts)
+                return allowedDiscounts;
+
+            foreach (var discount in _discountService.GetAllDiscounts(DiscountType.AssignedToCategories))
+            {
+                string key = string.Format(PriceCacheEventConsumer.DISCOUNT_CATEGORY_IDS_MODEL_KEY, 
+                    discount.Id, string.Join(",", customer.GetCustomerRoleIds()), _workContext.CurrentCustomer.Id);
+                var appliedToCategoryIds = _cacheManager.Get(key, () => 
+                {
+                    var categoryIds = new List<int>();
+                    foreach(var category in discount.AppliedToCategories)
+                    {
+                        if (!categoryIds.Contains(category.Id))
+                            categoryIds.Add(category.Id);
+                        if (discount.AppliedToSubCategories)
+                        {
+                            foreach(var childrenCategoryId in _categoryService.GetAllCategoriesByParentCategoryId(category.Id, false, true).Select(m => m.Id))
+                            {
+                                if (!categoryIds.Contains(childrenCategoryId))
+                                {
+                                    categoryIds.Add(childrenCategoryId);
+                                }
+                            }
+                        }
+                    }
+                    return categoryIds;
+                });
+                if (appliedToCategoryIds.Any())
+                {
+                    //load identifier of categories with this discount applied to
+                    var cacheKey2 = string.Format(PriceCacheEventConsumer.DISCOUNT_PRODUCT_CATEGORY_IDS_MODEL_KEY,
+                        product.Id,
+                        string.Join(",", customer.GetCustomerRoleIds()),
+                        _storeContext.CurrentStore.Id);
+                    var categoryIds = _cacheManager.Get(cacheKey2, () =>
+                        _categoryService
+                        .GetProductCategoriesByProductId(product.Id)
+                        .Select(x => x.CategoryId)
+                        .ToList());
+                    foreach (var id in categoryIds)
+                    {
+                        if (appliedToCategoryIds.Contains(id))
+                        {
+                            if (_discountService.ValidateDiscount(discount, customer).IsValid &&
+                                discount.DiscountType == DiscountType.AssignedToCategories &&
+                                !allowedDiscounts.ContainsDiscount(discount))
+                                allowedDiscounts.Add(discount);
+                        }
+                    }
+                }
+            }
+            return allowedDiscounts;
+        }
+
+        /// <summary>
+        /// Gets allowed discounts applied to manufacturers
+        /// </summary>
+        /// <param name="product">Product</param>
+        /// <param name="customer">Customer</param>
+        /// <returns>Discounts</returns>
+        protected virtual IList<Discount> GetAllowedDiscountsAppliedToManufacturers(Product product, Customer customer)
+        {
+            var allowedDiscounts = new List<Discount>();
+            if (_catalogSettings.IgnoreDiscounts)
+                return allowedDiscounts;
+
+            foreach (var discount in _discountService.GetAllDiscounts(DiscountType.AssignedToManufacturers))
+            {
+                //load identifier of categories with this discount applied to
+                var cacheKey = string.Format(PriceCacheEventConsumer.DISCOUNT_MANUFACTURER_IDS_MODEL_KEY,
+                    discount.Id,
+                    string.Join(",", customer.GetCustomerRoleIds()),
+                    _storeContext.CurrentStore.Id);
+                var appliedToManufacturerIds = _cacheManager.Get(cacheKey,
+                    () => discount.AppliedToManufacturers.Select(x => x.Id).ToList());
+
+                //compare with manufacturers of this product
+                if (appliedToManufacturerIds.Any())
+                {
+                    //load identifier of categories with this discount applied to
+                    var cacheKey2 = string.Format(PriceCacheEventConsumer.DISCOUNT_PRODUCT_MANUFACTURER_IDS_MODEL_KEY,
+                        product.Id,
+                        string.Join(",", customer.GetCustomerRoleIds()),
+                        _storeContext.CurrentStore.Id);
+                    var manufacturerIds = _cacheManager.Get(cacheKey2, () =>
+                        _manufacturerService
+                        .GetProductManufacturersByProductId(product.Id)
+                        .Select(x => x.ManufacturerId)
+                        .ToList());
+                    foreach (var id in manufacturerIds)
+                    {
+                        if (appliedToManufacturerIds.Contains(id))
+                        {
+                            if (_discountService.ValidateDiscount(discount, customer).IsValid &&
+                                discount.DiscountType == DiscountType.AssignedToManufacturers &&
+                                !allowedDiscounts.ContainsDiscount(discount))
+                                allowedDiscounts.Add(discount);
+                        }
+                    }
+                }
+            }
+
+            return allowedDiscounts;
+        }
+
+        /// <summary>
+        /// Gets allowed discounts
+        /// </summary>
+        /// <param name="product">Product</param>
+        /// <param name="customer">Customer</param>
+        /// <returns>Discounts</returns>
+        protected virtual IList<Discount> GetAllowedDiscounts(Product product, Customer customer)
+        {
+            var allowedDiscounts = new List<Discount>();
+            if (_catalogSettings.IgnoreDiscounts)
+                return allowedDiscounts;
+
+            //discounts applied to products
+            foreach (var discount in GetAllowedDiscountsAppliedToProduct(product, customer))
+                if (!allowedDiscounts.ContainsDiscount(discount))
+                    allowedDiscounts.Add(discount);
+
+            //discounts applied to categories
+            foreach (var discount in GetAllowedDiscountsAppliedToCategories(product, customer))
+                if (!allowedDiscounts.ContainsDiscount(discount))
+                    allowedDiscounts.Add(discount);
+
+            //discounts applied to manufacturers
+            foreach (var discount in GetAllowedDiscountsAppliedToManufacturers(product, customer))
+                if (!allowedDiscounts.ContainsDiscount(discount))
+                    allowedDiscounts.Add(discount);
+
+            return allowedDiscounts;
+        }
+
+        /// <summary>
+        /// Gets a tier price
+        /// </summary>
+        /// <param name="product">Product</param>
+        /// <param name="customer">Customer</param>
+        /// <param name="quantity">Quantity</param>
+        /// <returns>Price</returns>
+        protected virtual decimal? GetMinimumTierPrice(Product product, Customer customer, int quantity)
+        {
+            if (!product.HasTierPrices)
+                return decimal.Zero;
+
+            var tierPrices = product.TierPrices
+                .OrderBy(tp => tp.Quantity)
+                .ToList()
+                .FilterByStore(_storeContext.CurrentStore.Id)
+                .FilterForCustomer(customer)
+                .RemoveDuplicatedQuantities();
+
+            int previousQty = 1;
+            decimal? previousPrice = null;
+            foreach (var tierPrice in tierPrices)
+            {
+                //check quantity
+                if (quantity < tierPrice.Quantity)
+                    continue;
+                if (tierPrice.Quantity < previousQty)
+                    continue;
+
+                //save new price
+                previousPrice = tierPrice.Price;
+                previousQty = tierPrice.Quantity;
+            }
+
+            return previousPrice;
+        }
+
+        /// <summary>
+        /// Gets discount amount
+        /// </summary>
+        /// <param name="product">Product</param>
+        /// <param name="customer">The customer</param>
+        /// <param name="productPriceWithoutDiscount">Already calculated product price without discount</param>
+        /// <param name="appliedDiscount">Applied discount</param>
+        /// <returns>Discount amount</returns>
+        protected virtual decimal GetDiscountAmount(Product product,
+            Customer customer,
+            decimal productPriceWithoutDiscount,
+            out Discount appliedDiscount)
+        {
+            if (product == null)
+                throw new ArgumentNullException("product");
+
+            appliedDiscount = null;
+            decimal appliedDiscountAmount = decimal.Zero;
+
+            //we don't apply discounts to products with price entered by a customer
+            if (product.CustomerEntersPrice)
+                return appliedDiscountAmount;
+
+            //discounts are disabled
+            if (_catalogSettings.IgnoreDiscounts)
+                return appliedDiscountAmount;
+
+            var allowedDiscounts = GetAllowedDiscounts(product, customer);
+
+            //no discounts
+            if (allowedDiscounts.Count == 0)
+                return appliedDiscountAmount;
+
+            appliedDiscount = allowedDiscounts.GetPreferredDiscount(productPriceWithoutDiscount);
+
+            if (appliedDiscount != null)
+                appliedDiscountAmount = appliedDiscount.GetDiscountAmount(productPriceWithoutDiscount);
+
+            return appliedDiscountAmount;
+        }
+
+        #endregion
+
+        public decimal GetFinalPrice(Product product, Customer customer, decimal additionalCharge = 0, bool includeDiscounts = true, int quantity = 1)
+        {
+            decimal discountAmount;
+            Discount appliedDiscount;
+            return GetFinalPrice(product, customer, additionalCharge, includeDiscounts,
+                quantity, out discountAmount, out appliedDiscount);
+        }
+
+        public decimal GetFinalPrice(Product product, Customer customer, decimal additionalCharge, bool includeDiscounts, int quantity, 
+            out decimal discountAmount, out Discount appliedDiscount)
+        {
+            return GetFinalPrice(product, customer,
+                 additionalCharge, includeDiscounts, quantity,
+                 null, null,
+                 out discountAmount, out appliedDiscount);
+        }
+
+        public decimal GetFinalPrice(Product product, Customer customer, decimal additionalCharge, bool includeDiscounts, int quantity, 
+            DateTime? rentalStartDate, DateTime? rentalEndDate, out decimal discountAmount, out Discount appliedDiscount)
+        {
+            if (product == null)
+                throw new ArgumentNullException("product");
+
+            discountAmount = decimal.Zero;
+            appliedDiscount = null;
+
+            var cacheKey = string.Format(PriceCacheEventConsumer.PRODUCT_PRICE_MODEL_KEY,
+                product.Id,
+                additionalCharge.ToString(CultureInfo.InvariantCulture),
+                includeDiscounts,
+                quantity,
+                string.Join(",", customer.GetCustomerRoleIds()),
+                _storeContext.CurrentStore.Id);
+            var cacheTime = _catalogSettings.CacheProductPrices ? 60 : 0;
+            //we do not cache price for rental products
+            //otherwise, it can cause memory leaks (to store all possible date period combinations)
+            if (product.IsRental)
+                cacheTime = 0;
+            var cachedPrice = _cacheManager.Get(cacheKey, cacheTime, () =>
+            {
+                var result = new ProductPriceForCaching();
+
+                //initial price
+                decimal price = product.Price;
+
+                //special price
+                var specialPrice = product.GetSpecialPrice();
+                if (specialPrice.HasValue)
+                    price = specialPrice.Value;
+
+                //tier prices
+                if (product.HasTierPrices)
+                {
+                    decimal? tierPrice = GetMinimumTierPrice(product, customer, quantity);
+                    if (tierPrice.HasValue)
+                        price = Math.Min(price, tierPrice.Value);
+                }
+
+                //additional charge额外的费用
+                price = price + additionalCharge;
+
+                //rental products
+                if (product.IsRental)
+                    if (rentalStartDate.HasValue && rentalEndDate.HasValue)
+                        price = price * product.GetRentalPeriods(rentalStartDate.Value, rentalEndDate.Value);
+
+                if (includeDiscounts)
+                {
+                    //discount
+                    Discount tmpAppliedDiscount;
+                    decimal tmpDiscountAmount = GetDiscountAmount(product, customer, price, out tmpAppliedDiscount);
+                    price = price - tmpDiscountAmount;
+
+                    if (tmpAppliedDiscount != null)
+                    {
+                        result.AppliedDiscountId = tmpAppliedDiscount.Id;
+                        result.AppliedDiscountAmount = tmpDiscountAmount;
+                    }
+                }
+
+                if (price < decimal.Zero)
+                    price = decimal.Zero;
+
+                result.Price = price;
+                return result;
+            });
+
+            if (includeDiscounts)
+            {
+                //Discount instance cannnot be cached between requests (when "catalogSettings.CacheProductPrices" is "true)
+                //This is limitation of Entity Framework
+                //That's why we load it here after working with cache
+                appliedDiscount = _discountService.GetDiscountById(cachedPrice.AppliedDiscountId);
+                if (appliedDiscount != null)
+                {
+                    discountAmount = cachedPrice.AppliedDiscountAmount;
+                }
+            }
+
+            return cachedPrice.Price;
+        }
+
+        public decimal GetUnitPrice(ShoppingCartItem shoppingCartItem, bool includeDiscounts = true)
+        {
+            decimal discountAmount;
+            Discount appliedDiscount;
+            return GetUnitPrice(shoppingCartItem, includeDiscounts,
+                out discountAmount, out appliedDiscount);
+        }
+
+        public decimal GetUnitPrice(ShoppingCartItem shoppingCartItem, bool includeDiscounts, 
+            out decimal discountAmount, out Discount appliedDiscount)
+        {
+            if (shoppingCartItem == null)
+                throw new ArgumentNullException("shoppingCartItem");
+
+            return GetUnitPrice(shoppingCartItem.Product,
+                shoppingCartItem.Customer,
+                shoppingCartItem.ShoppingCartType,
+                shoppingCartItem.Quantity,
+                shoppingCartItem.AttributesXml,
+                shoppingCartItem.CustomerEnteredPrice,
+                shoppingCartItem.RentalStartDateUtc,
+                shoppingCartItem.RentalEndDateUtc,
+                includeDiscounts,
+                out discountAmount,
+                out appliedDiscount);
+        }
+
+        public decimal GetUnitPrice(Product product, Customer customer, ShoppingCartType shoppingCartType, 
+            int quantity, string attributesXml, decimal customerEnteredPrice, DateTime? rentalStartDate, DateTime? rentalEndDate, 
+            bool includeDiscounts, out decimal discountAmount, out Discount appliedDiscount)
+        {
+            if (product == null)
+                throw new ArgumentNullException("product");
+
+            if (customer == null)
+                throw new ArgumentNullException("customer");
+
+            discountAmount = decimal.Zero;
+            appliedDiscount = null;
+
+            decimal finalPrice;
+
+            var combination = _productAttributeParser.FindProductAttributeCombination(product, attributesXml);
+            if (combination != null && combination.OverriddenPrice.HasValue)
+            {
+                finalPrice = combination.OverriddenPrice.Value;
+            }
+            else
+            {
+                //summarize price of all attributes
+                decimal attributesTotalPrice = decimal.Zero;
+                var attributeValues = _productAttributeParser.ParseProductAttributeValues(attributesXml);
+                if (attributeValues != null)
+                {
+                    foreach (var attributeValue in attributeValues)
+                    {
+                        attributesTotalPrice += GetProductAttributeValuePriceAdjustment(attributeValue);
+                    }
+                }
+
+                //get price of a product (with previously calculated price of all attributes)
+                if (product.CustomerEntersPrice)
+                {
+                    finalPrice = customerEnteredPrice;
+                }
+                else
+                {
+                    int qty;
+                    if (_shoppingCartSettings.GroupTierPricesForDistinctShoppingCartItems)
+                    {
+                        //the same products with distinct product attributes could be stored as distinct "ShoppingCartItem" records
+                        //so let's find how many of the current products are in the cart
+                        qty = customer.ShoppingCartItems
+                            .Where(x => x.ProductId == product.Id)
+                            .Where(x => x.ShoppingCartType == shoppingCartType)
+                            .Sum(x => x.Quantity);
+                        if (qty == 0)
+                        {
+                            qty = quantity;
+                        }
+                    }
+                    else
+                    {
+                        qty = quantity;
+                    }
+                    finalPrice = GetFinalPrice(product,
+                        customer,
+                        attributesTotalPrice,
+                        includeDiscounts,
+                        qty,
+                        product.IsRental ? rentalStartDate : null,
+                        product.IsRental ? rentalEndDate : null,
+                        out discountAmount, out appliedDiscount);
+                }
+            }
+
+            //rounding
+            if (_shoppingCartSettings.RoundPricesDuringCalculation)
+                finalPrice = RoundingHelper.RoundPrice(finalPrice);
+
+            return finalPrice;
+        }
+
+        public decimal GetSubTotal(ShoppingCartItem shoppingCartItem, bool includeDiscounts = true)
+        {
+            decimal discountAmount;
+            Discount appliedDiscount;
+            return GetSubTotal(shoppingCartItem, includeDiscounts, out discountAmount, out appliedDiscount);
+        }
+
+        public decimal GetSubTotal(ShoppingCartItem shoppingCartItem, bool includeDiscounts, out decimal discountAmount, out Discount appliedDiscount)
+        {
+            if (shoppingCartItem == null)
+                throw new ArgumentNullException("shoppingCartItem");
+
+            decimal subTotal;
+
+            //unit price
+            var unitPrice = GetUnitPrice(shoppingCartItem, includeDiscounts,
+                out discountAmount, out appliedDiscount);
+
+            //discount
+            if (appliedDiscount != null)
+            {
+                if (appliedDiscount.MaximumDiscountedQuantity.HasValue &&
+                    shoppingCartItem.Quantity > appliedDiscount.MaximumDiscountedQuantity.Value)
+                {
+                    //we cannot apply discount for all shopping cart items
+                    var discountedQuantity = appliedDiscount.MaximumDiscountedQuantity.Value;
+                    var discountedSubTotal = unitPrice * discountedQuantity;
+                    discountAmount = discountAmount * discountedQuantity;
+
+                    var notDiscountedQuantity = shoppingCartItem.Quantity - discountedQuantity;
+                    var notDiscountedUnitPrice = GetUnitPrice(shoppingCartItem, false);
+                    var notDiscountedSubTotal = notDiscountedUnitPrice * notDiscountedQuantity;
+
+                    subTotal = discountedSubTotal + notDiscountedSubTotal;
+                }
+                else
+                {
+                    //discount is applied to all items (quantity)
+                    //calculate discount amount for all items
+                    discountAmount = discountAmount * shoppingCartItem.Quantity;
+
+                    subTotal = unitPrice * shoppingCartItem.Quantity;
+                }
+            }
+            else
+            {
+                subTotal = unitPrice * shoppingCartItem.Quantity;
+            }
+            return subTotal;
+        }
+
+        public decimal GetProductCost(Product product, string attributesXml)
+        {
+            if (product == null)
+                throw new ArgumentNullException("product");
+
+            decimal cost = product.ProductCost;
+            var attributeValues = _productAttributeParser.ParseProductAttributeValues(attributesXml);
+            foreach (var attributeValue in attributeValues)
+            {
+                switch (attributeValue.AttributeValueType)
+                {
+                    case AttributeValueType.Simple:
+                        {
+                            //simple attribute
+                            cost += attributeValue.Cost;
+                        }
+                        break;
+                    case AttributeValueType.AssociatedToProduct:
+                        {
+                            //bundled product
+                            var associatedProduct = _productService.GetProductById(attributeValue.AssociatedProductId);
+                            if (associatedProduct != null)
+                                cost += associatedProduct.ProductCost * attributeValue.Quantity;
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            return cost;
+        }
+
+        public decimal GetProductAttributeValuePriceAdjustment(ProductAttributeValue value)
+        {
+            if (value == null)
+                throw new ArgumentNullException("value");
+
+            var adjustment = decimal.Zero;
+            switch (value.AttributeValueType)
+            {
+                case AttributeValueType.Simple:
+                    {
+                        //simple attribute
+                        adjustment = value.PriceAdjustment;
+                    }
+                    break;
+                case AttributeValueType.AssociatedToProduct:
+                    {
+                        //bundled product
+                        var associatedProduct = _productService.GetProductById(value.AssociatedProductId);
+                        if (associatedProduct != null)
+                        {
+                            adjustment = GetFinalPrice(associatedProduct, _workContext.CurrentCustomer, includeDiscounts: true) * value.Quantity;
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            return adjustment;
         }
 
         #endregion

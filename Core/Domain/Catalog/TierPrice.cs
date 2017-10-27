@@ -9,6 +9,7 @@ namespace Core.Domain.Catalog
 {
     /// <summary>
     /// Represents a tier price
+    /// 层级价格
     /// </summary>
     public partial class TierPrice : BaseEntity
     {

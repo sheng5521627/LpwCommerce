@@ -20,19 +20,19 @@ namespace Core.Domain.Orders
         /// </summary>
         Received = 10,
         /// <summary>
-        /// Return authorized
+        /// Return authorized 经授权的
         /// </summary>
         ReturnAuthorized = 20,
         /// <summary>
-        /// Item(s) repaired
+        /// Item(s) repaired 修复
         /// </summary>
         ItemsRepaired = 30,
         /// <summary>
-        /// Item(s) refunded
+        /// Item(s) refunded 退还
         /// </summary>
         ItemsRefunded = 40,
         /// <summary>
-        /// Request rejected
+        /// Request rejected 拒绝
         /// </summary>
         RequestRejected = 50,
         /// <summary>

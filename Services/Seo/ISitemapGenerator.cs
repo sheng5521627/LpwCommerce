@@ -1,5 +1,4 @@
-﻿using Core;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -20,7 +19,7 @@ namespace Services.Seo
         /// </summary>
         /// <param name="urlHelper">URL helper</param>
         /// <returns>Sitemap.xml as string</returns>
-        string Generate(XmlHelper urlHelper);
+        string Generate(UrlHelper urlHelper);
 
         /// <summary>
         /// This will build an xml sitemap for better index with search engines.

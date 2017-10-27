@@ -511,7 +511,7 @@ namespace Services.Catalog
             var attributes = ParseProductAttributeMappings(attributesXml);
             foreach(var attibute in attributes)
             {
-                if (attibute.ShouldHaveValues())
+                if (!attibute.ShouldHaveValues())
                     continue;
 
                 var valuesStr = ParseValues(attributesXml, attibute.Id);

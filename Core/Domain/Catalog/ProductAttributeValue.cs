@@ -54,6 +54,7 @@ namespace Core.Domain.Catalog
 
         /// <summary>
         /// Gets or sets the attibute value cost (used only with AttributeValueType.Simple)
+        /// 成本价
         /// </summary>
         public decimal Cost { get; set; }
 

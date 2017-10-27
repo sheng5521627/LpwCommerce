@@ -9,6 +9,7 @@ namespace Core.Domain.Forums
 {
     /// <summary>
     /// Represents a forum subscription item
+    /// 表示论坛订阅项。
     /// </summary>
     public partial class ForumSubscription : BaseEntity
     {

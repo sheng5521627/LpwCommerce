@@ -9,6 +9,14 @@ using Core.Data;
 using Core.Domain.Localization;
 using Core.Domain.Security;
 using Core.Domain.Stores;
+using Services.Localization;
+using Services.Messages;
+using Data;
+using Core.Caching;
+using Core.Domain.Common;
+using Services.Events;
+using Services.Security;
+using Services.Stores;
 
 namespace Services.Catalog
 {

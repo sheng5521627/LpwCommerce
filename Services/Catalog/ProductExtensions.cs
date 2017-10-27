@@ -275,6 +275,7 @@ namespace Services.Catalog
 
         /// <summary>
         /// Get number of rental periods (price ratio)
+        /// 获得租赁期数（价格比）
         /// </summary>
         /// <param name="product">Product</param>
         /// <param name="startDate">Start date</param>
@@ -340,6 +341,7 @@ namespace Services.Catalog
 
         /// <summary>
         /// Gets SKU, Manufacturer part number and GTIN
+        /// 获取产品，制造商零件编号和GTIN
         /// </summary>
         /// <param name="product">Product</param>
         /// <param name="attributesXml">Attributes in XML format</param>

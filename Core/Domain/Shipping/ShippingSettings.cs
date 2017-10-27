@@ -109,6 +109,7 @@ namespace Core.Domain.Shipping
 
         /// <summary>
         /// Gets or sets a value indicating whether dimensions are calculated based on cube root of volume
+        /// 获取或设置一个值，该值指示是否基于体积的多维数据集计算维度。
         /// </summary>
         public bool UseCubeRootMethod { get; set; }
 

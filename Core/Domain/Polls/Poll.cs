@@ -8,7 +8,7 @@ using Core.Domain.Localization;
 namespace Core.Domain.Polls
 {
     /// <summary>
-    /// Represents a poll
+    /// Represents a poll(民意调查)
     /// </summary>
     public partial class Poll : BaseEntity
     {

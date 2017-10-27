@@ -28,6 +28,7 @@ using Services.Orders;
 using Services.Payments;
 using Core.Infrastructure;
 using System.Web;
+using Services.Customers;
 
 namespace Services.Messages
 {
@@ -569,12 +570,36 @@ namespace Services.Messages
 
         public void AddCustomerTokens(IList<Token> tokens, Customer customer)
         {
-            throw new NotImplementedException();
+            tokens.Add(new Token("Customer.Email", customer.Email));
+            tokens.Add(new Token("Customer.Username", customer.Username));
+            tokens.Add(new Token("Customer.FullName", customer.GetFullName()));
+            tokens.Add(new Token("Customer.FirstName", customer.GetAttribute<string>(SystemCustomerAttributeNames.FirstName)));
+            tokens.Add(new Token("Customer.LastName", customer.GetAttribute<string>(SystemCustomerAttributeNames.LastName)));
+            tokens.Add(new Token("Customer.VatNumber", customer.GetAttribute<string>(SystemCustomerAttributeNames.VatNumber)));
+            tokens.Add(new Token("Customer.VatNumberStatus", ((VatNumberStatus)customer.GetAttribute<int>(SystemCustomerAttributeNames.VatNumberStatusId)).ToString()));
+
+
+
+            //note: we do not use SEO friendly URLS because we can get errors caused by having .(dot) in the URL (from the email address)
+            //TODO add a method for getting URL (use routing because it handles all SEO friendly URLs)
+            string passwordRecoveryUrl = string.Format("{0}passwordrecovery/confirm?token={1}&email={2}", GetStoreUrl(), customer.GetAttribute<string>(SystemCustomerAttributeNames.PasswordRecoveryToken), HttpUtility.UrlEncode(customer.Email));
+            string accountActivationUrl = string.Format("{0}customer/activation?token={1}&email={2}", GetStoreUrl(), customer.GetAttribute<string>(SystemCustomerAttributeNames.AccountActivationToken), HttpUtility.UrlEncode(customer.Email));
+            var wishlistUrl = string.Format("{0}wishlist/{1}", GetStoreUrl(), customer.CustomerGuid);
+            tokens.Add(new Token("Customer.PasswordRecoveryURL", passwordRecoveryUrl, true));
+            tokens.Add(new Token("Customer.AccountActivationURL", accountActivationUrl, true));
+            tokens.Add(new Token("Wishlist.URLForCustomer", wishlistUrl, true));
+
+            //event notification
+            _eventPublisher.EntityTokensAdded(customer, tokens);
         }
 
         public void AddForumPostTokens(IList<Token> tokens, ForumPost forumPost)
         {
-            throw new NotImplementedException();
+            tokens.Add(new Token("Forums.PostAuthor", forumPost.Customer.FormatUserName()));
+            tokens.Add(new Token("Forums.PostBody", forumPost.FormatPostText(), true));
+
+            //event notification
+            _eventPublisher.EntityTokensAdded(forumPost, tokens);
         }
 
         public void AddForumTokens(IList<Token> tokens, Forum forum)

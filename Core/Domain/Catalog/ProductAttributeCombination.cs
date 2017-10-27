@@ -48,7 +48,8 @@ namespace Core.Domain.Catalog
         public string Gtin { get; set; }
 
         /// <summary>
-        /// Gets or sets the attribute combination price. This way a store owner can override the default product price when this attribute combination is added to the cart. For example, you can give a discount this way.
+        /// Gets or sets the attribute combination price. This way a store owner can override the default product price 
+        /// when this attribute combination is added to the cart. For example, you can give a discount this way.
         /// </summary>
         public decimal? OverriddenPrice { get; set; }
 
