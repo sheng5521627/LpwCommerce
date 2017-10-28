@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Core.Configuration;
+using Core.Domain.Orders;
 
 namespace Core.Domain.Customers
 {
@@ -38,6 +39,16 @@ namespace Core.Domain.Customers
         /// Gets or sets a number of points awarded for purchases
         /// </summary>
         public int PointsForPurchases_Points { get; set; }
+
+        /// <summary>
+        /// Points are awarded when the order status is
+        /// </summary>
+        public OrderStatus PointsForPurchases_Awarded { get; set; }
+
+        /// <summary>
+        /// Points are canceled when the order is
+        /// </summary>
+        public OrderStatus PointsForPurchases_Canceled { get; set; }
 
         /// <summary>
         /// Gets or sets a delay before activation points

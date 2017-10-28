@@ -22,7 +22,7 @@ namespace Services.Common
         public static TPropType GetAttribute<TPropType>(this BaseEntity entity, string key, int storeId = 0)
         {
             var genericAttributesService = EngineContext.Current.Resolve<IGenericAttributeService>();
-            return GetAttribute< TPropType>(entity, key, genericAttributesService, storeId);
+            return GetAttribute<TPropType>(entity, key, genericAttributesService, storeId);
         }
 
         /// <summary>
@@ -55,4 +55,5 @@ namespace Services.Common
 
             return CommonHelper.To<TPropType>(prop.Value);
         }
+    }
 }

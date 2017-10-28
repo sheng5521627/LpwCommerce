@@ -29,6 +29,11 @@ using Services.Payments;
 using Core.Infrastructure;
 using System.Web;
 using Services.Customers;
+using Services.Forums;
+using Services.Seo;
+using Core.Html;
+using Services.Shipping;
+using System.Globalization;
 
 namespace Services.Messages
 {
@@ -604,92 +609,415 @@ namespace Services.Messages
 
         public void AddForumTokens(IList<Token> tokens, Forum forum)
         {
-            throw new NotImplementedException();
+            //TODO add a method for getting URL (use routing because it handles all SEO friendly URLs)
+            var forumUrl = string.Format("{0}boards/forum/{1}/{2}", GetStoreUrl(), forum.Id, forum.GetSeName());
+            tokens.Add(new Token("Forums.ForumURL", forumUrl, true));
+            tokens.Add(new Token("Forums.ForumName", forum.Name));
+
+            //event notification
+            _eventPublisher.EntityTokensAdded(forum, tokens);
         }
 
         public void AddForumTopicTokens(IList<Token> tokens, ForumTopic forumTopic, int? friendlyForumTopicPageIndex = default(int?), int? appendedPostIdentifierAnchor = default(int?))
         {
-            throw new NotImplementedException();
+            //TODO add a method for getting URL (use routing because it handles all SEO friendly URLs)
+            string topicUrl;
+            if (friendlyForumTopicPageIndex.HasValue && friendlyForumTopicPageIndex.Value > 1)
+                topicUrl = string.Format("{0}boards/topic/{1}/{2}/page/{3}", GetStoreUrl(), forumTopic.Id, forumTopic.GetSeName(), friendlyForumTopicPageIndex.Value);
+            else
+                topicUrl = string.Format("{0}boards/topic/{1}/{2}", GetStoreUrl(), forumTopic.Id, forumTopic.GetSeName());
+            if (appendedPostIdentifierAnchor.HasValue && appendedPostIdentifierAnchor.Value > 0)
+                topicUrl = string.Format("{0}#{1}", topicUrl, appendedPostIdentifierAnchor.Value);
+            tokens.Add(new Token("Forums.TopicURL", topicUrl, true));
+            tokens.Add(new Token("Forums.TopicName", forumTopic.Subject));
+
+            //event notification
+            _eventPublisher.EntityTokensAdded(forumTopic, tokens);
         }
 
         public void AddGiftCardTokens(IList<Token> tokens, GiftCard giftCard)
         {
-            throw new NotImplementedException();
+            tokens.Add(new Token("GiftCard.SenderName", giftCard.SenderName));
+            tokens.Add(new Token("GiftCard.SenderEmail", giftCard.SenderEmail));
+            tokens.Add(new Token("GiftCard.RecipientName", giftCard.RecipientName));
+            tokens.Add(new Token("GiftCard.RecipientEmail", giftCard.RecipientEmail));
+            tokens.Add(new Token("GiftCard.Amount", _priceFormatter.FormatPrice(giftCard.Amount, true, false)));
+            tokens.Add(new Token("GiftCard.CouponCode", giftCard.GiftCardCouponCode));
+
+            var giftCardMesage = !String.IsNullOrWhiteSpace(giftCard.Message) ?
+                HtmlHelper.FormatText(giftCard.Message, false, true, false, false, false, false) : "";
+
+            tokens.Add(new Token("GiftCard.Message", giftCardMesage, true));
+
+            //event notification
+            _eventPublisher.EntityTokensAdded(giftCard, tokens);
         }
 
         public void AddNewsCommentTokens(IList<Token> tokens, NewsComment newsComment)
         {
-            throw new NotImplementedException();
+            tokens.Add(new Token("NewsComment.NewsTitle", newsComment.NewsItem.Title));
+
+            //event notification
+            _eventPublisher.EntityTokensAdded(newsComment, tokens);
         }
 
         public void AddNewsLetterSubscriptionTokens(IList<Token> tokens, NewsLetterSubscription subscription)
         {
-            throw new NotImplementedException();
+            tokens.Add(new Token("NewsLetterSubscription.Email", subscription.Email));
+
+
+            const string urlFormat = "{0}newsletter/subscriptionactivation/{1}/{2}";
+
+            var activationUrl = String.Format(urlFormat, GetStoreUrl(), subscription.NewsLetterSubscriptionGuid, "true");
+            tokens.Add(new Token("NewsLetterSubscription.ActivationUrl", activationUrl, true));
+
+            var deActivationUrl = String.Format(urlFormat, GetStoreUrl(), subscription.NewsLetterSubscriptionGuid, "false");
+            tokens.Add(new Token("NewsLetterSubscription.DeactivationUrl", deActivationUrl, true));
+
+            //event notification
+            _eventPublisher.EntityTokensAdded(subscription, tokens);
         }
 
         public void AddOrderNoteTokens(IList<Token> tokens, OrderNote orderNote)
         {
-            throw new NotImplementedException();
+            tokens.Add(new Token("Order.NewNoteText", orderNote.FormatOrderNoteText(), true));
+
+            //event notification
+            _eventPublisher.EntityTokensAdded(orderNote, tokens);
         }
 
         public void AddOrderRefundedTokens(IList<Token> tokens, Order order, decimal refundedAmount)
         {
-            throw new NotImplementedException();
+            //should we convert it to customer currency?
+            //most probably, no. It can cause some rounding or legal issues
+            //furthermore, exchange rate could be changed
+            //so let's display it the primary store currency
+
+            var primaryStoreCurrencyCode = _currencyService.GetCurrencyById(_currencySettings.PrimaryStoreCurrencyId).CurrencyCode;
+            var refundedAmountStr = _priceFormatter.FormatPrice(refundedAmount, true, primaryStoreCurrencyCode, false, _workContext.WorkingLanguage);
+
+            tokens.Add(new Token("Order.AmountRefunded", refundedAmountStr));
+
+            //event notification
+            _eventPublisher.EntityTokensAdded(order, tokens);
         }
 
         public void AddOrderTokens(IList<Token> tokens, Order order, int languageId, int vendorId = 0)
         {
-            throw new NotImplementedException();
+            tokens.Add(new Token("Order.OrderNumber", order.Id.ToString()));
+
+            tokens.Add(new Token("Order.CustomerFullName", string.Format("{0} {1}", order.BillingAddress.FirstName, order.BillingAddress.LastName)));
+            tokens.Add(new Token("Order.CustomerEmail", order.BillingAddress.Email));
+
+
+            tokens.Add(new Token("Order.BillingFirstName", order.BillingAddress.FirstName));
+            tokens.Add(new Token("Order.BillingLastName", order.BillingAddress.LastName));
+            tokens.Add(new Token("Order.BillingPhoneNumber", order.BillingAddress.PhoneNumber));
+            tokens.Add(new Token("Order.BillingEmail", order.BillingAddress.Email));
+            tokens.Add(new Token("Order.BillingFaxNumber", order.BillingAddress.FaxNumber));
+            tokens.Add(new Token("Order.BillingCompany", order.BillingAddress.Company));
+            tokens.Add(new Token("Order.BillingAddress1", order.BillingAddress.Address1));
+            tokens.Add(new Token("Order.BillingAddress2", order.BillingAddress.Address2));
+            tokens.Add(new Token("Order.BillingCity", order.BillingAddress.City));
+            tokens.Add(new Token("Order.BillingStateProvince", order.BillingAddress.StateProvince != null ? order.BillingAddress.StateProvince.GetLocalized(x => x.Name) : ""));
+            tokens.Add(new Token("Order.BillingZipPostalCode", order.BillingAddress.ZipPostalCode));
+            tokens.Add(new Token("Order.BillingCountry", order.BillingAddress.Country != null ? order.BillingAddress.Country.GetLocalized(x => x.Name) : ""));
+            tokens.Add(new Token("Order.BillingCustomAttributes", _addressAttributeFormatter.FormatAttributes(order.BillingAddress.CustomAttributes), true));
+
+            tokens.Add(new Token("Order.ShippingMethod", order.ShippingMethod));
+            tokens.Add(new Token("Order.ShippingFirstName", order.ShippingAddress != null ? order.ShippingAddress.FirstName : ""));
+            tokens.Add(new Token("Order.ShippingLastName", order.ShippingAddress != null ? order.ShippingAddress.LastName : ""));
+            tokens.Add(new Token("Order.ShippingPhoneNumber", order.ShippingAddress != null ? order.ShippingAddress.PhoneNumber : ""));
+            tokens.Add(new Token("Order.ShippingEmail", order.ShippingAddress != null ? order.ShippingAddress.Email : ""));
+            tokens.Add(new Token("Order.ShippingFaxNumber", order.ShippingAddress != null ? order.ShippingAddress.FaxNumber : ""));
+            tokens.Add(new Token("Order.ShippingCompany", order.ShippingAddress != null ? order.ShippingAddress.Company : ""));
+            tokens.Add(new Token("Order.ShippingAddress1", order.ShippingAddress != null ? order.ShippingAddress.Address1 : ""));
+            tokens.Add(new Token("Order.ShippingAddress2", order.ShippingAddress != null ? order.ShippingAddress.Address2 : ""));
+            tokens.Add(new Token("Order.ShippingCity", order.ShippingAddress != null ? order.ShippingAddress.City : ""));
+            tokens.Add(new Token("Order.ShippingStateProvince", order.ShippingAddress != null && order.ShippingAddress.StateProvince != null ? order.ShippingAddress.StateProvince.GetLocalized(x => x.Name) : ""));
+            tokens.Add(new Token("Order.ShippingZipPostalCode", order.ShippingAddress != null ? order.ShippingAddress.ZipPostalCode : ""));
+            tokens.Add(new Token("Order.ShippingCountry", order.ShippingAddress != null && order.ShippingAddress.Country != null ? order.ShippingAddress.Country.GetLocalized(x => x.Name) : ""));
+            tokens.Add(new Token("Order.ShippingCustomAttributes", _addressAttributeFormatter.FormatAttributes(order.ShippingAddress != null ? order.ShippingAddress.CustomAttributes : ""), true));
+
+            var paymentMethod = _paymentService.LoadPaymentMethodBySystemName(order.PaymentMethodSystemName);
+            var paymentMethodName = paymentMethod != null ? paymentMethod.GetLocalizedFriendlyName(_localizationService, _workContext.WorkingLanguage.Id) : order.PaymentMethodSystemName;
+            tokens.Add(new Token("Order.PaymentMethod", paymentMethodName));
+            tokens.Add(new Token("Order.VatNumber", order.VatNumber));
+            var sbCustomValues = new StringBuilder();
+            var customValues = order.DeserializeCustomValues();
+            if (customValues != null)
+            {
+                foreach (var item in customValues)
+                {
+                    sbCustomValues.AppendFormat("{0}: {1}", HttpUtility.HtmlEncode(item.Key), HttpUtility.HtmlEncode(item.Value != null ? item.Value.ToString() : ""));
+                    sbCustomValues.Append("<br />");
+                }
+            }
+            tokens.Add(new Token("Order.CustomValues", sbCustomValues.ToString(), true));
+
+
+
+            tokens.Add(new Token("Order.Product(s)", ProductListToHtmlTable(order, languageId, vendorId), true));
+
+            var language = _languageService.GetLanguageById(languageId);
+            if (language != null && !String.IsNullOrEmpty(language.LanguageCulture))
+            {
+                DateTime createdOn = _dateTimeHelper.ConvertToUserTime(order.CreatedOnUtc, TimeZoneInfo.Utc, _dateTimeHelper.GetCustomerTimeZone(order.Customer));
+                tokens.Add(new Token("Order.CreatedOn", createdOn.ToString("D", new CultureInfo(language.LanguageCulture))));
+            }
+            else
+            {
+                tokens.Add(new Token("Order.CreatedOn", order.CreatedOnUtc.ToString("D")));
+            }
+
+            //TODO add a method for getting URL (use routing because it handles all SEO friendly URLs)
+            tokens.Add(new Token("Order.OrderURLForCustomer", string.Format("{0}orderdetails/{1}", GetStoreUrl(order.StoreId), order.Id), true));
+
+            //event notification
+            _eventPublisher.EntityTokensAdded(order, tokens);
         }
 
         public void AddPrivateMessageTokens(IList<Token> tokens, PrivateMessage privateMessage)
         {
-            throw new NotImplementedException();
+            tokens.Add(new Token("PrivateMessage.Subject", privateMessage.Subject));
+            tokens.Add(new Token("PrivateMessage.Text", privateMessage.FormatPrivateMessageText(), true));
+
+            //event notification
+            _eventPublisher.EntityTokensAdded(privateMessage, tokens);
         }
 
         public void AddProductReviewTokens(IList<Token> tokens, ProductReview productReview)
         {
-            throw new NotImplementedException();
+            tokens.Add(new Token("ProductReview.ProductName", productReview.Product.Name));
+
+            //event notification
+            _eventPublisher.EntityTokensAdded(productReview, tokens);
         }
 
         public void AddProductTokens(IList<Token> tokens, Product product, int languageId)
         {
-            throw new NotImplementedException();
+            tokens.Add(new Token("Product.ID", product.Id.ToString()));
+            tokens.Add(new Token("Product.Name", product.GetLocalized(x => x.Name, languageId)));
+            tokens.Add(new Token("Product.ShortDescription", product.GetLocalized(x => x.ShortDescription, languageId), true));
+            tokens.Add(new Token("Product.SKU", product.Sku));
+            tokens.Add(new Token("Product.StockQuantity", product.GetTotalStockQuantity().ToString()));
+
+            //TODO add a method for getting URL (use routing because it handles all SEO friendly URLs)
+            var productUrl = string.Format("{0}{1}", GetStoreUrl(), product.GetSeName());
+            tokens.Add(new Token("Product.ProductURLForCustomer", productUrl, true));
+
+            //event notification
+            _eventPublisher.EntityTokensAdded(product, tokens);
         }
 
         public void AddRecurringPaymentTokens(IList<Token> tokens, RecurringPayment recurringPayment)
         {
-            throw new NotImplementedException();
+            tokens.Add(new Token("RecurringPayment.ID", recurringPayment.Id.ToString()));
+
+            //event notification
+            _eventPublisher.EntityTokensAdded(recurringPayment, tokens);
         }
 
         public void AddReturnRequestTokens(IList<Token> tokens, ReturnRequest returnRequest, OrderItem orderItem)
         {
-            throw new NotImplementedException();
+            tokens.Add(new Token("ReturnRequest.ID", returnRequest.Id.ToString()));
+            tokens.Add(new Token("ReturnRequest.OrderId", orderItem.OrderId.ToString()));
+            tokens.Add(new Token("ReturnRequest.Product.Quantity", returnRequest.Quantity.ToString()));
+            tokens.Add(new Token("ReturnRequest.Product.Name", orderItem.Product.Name));
+            tokens.Add(new Token("ReturnRequest.Reason", returnRequest.ReasonForReturn));
+            tokens.Add(new Token("ReturnRequest.RequestedAction", returnRequest.RequestedAction));
+            tokens.Add(new Token("ReturnRequest.CustomerComment", HtmlHelper.FormatText(returnRequest.CustomerComments, false, true, false, false, false, false), true));
+            tokens.Add(new Token("ReturnRequest.StaffNotes", HtmlHelper.FormatText(returnRequest.StaffNotes, false, true, false, false, false, false), true));
+            tokens.Add(new Token("ReturnRequest.Status", returnRequest.ReturnRequestStatus.GetLocalizedEnum(_localizationService, _workContext)));
+
+            //event notification
+            _eventPublisher.EntityTokensAdded(returnRequest, tokens);
         }
 
         public void AddShipmentTokens(IList<Token> tokens, Shipment shipment, int languageId)
         {
-            throw new NotImplementedException();
+            tokens.Add(new Token("Shipment.ShipmentNumber", shipment.Id.ToString()));
+            tokens.Add(new Token("Shipment.TrackingNumber", shipment.TrackingNumber));
+            var trackingNumberUrl = "";
+            if (!String.IsNullOrEmpty(shipment.TrackingNumber))
+            {
+                //we cannot inject IShippingService into constructor because it'll cause circular references.
+                //that's why we resolve it here this way
+                var shippingService = EngineContext.Current.Resolve<IShippingService>();
+                var srcm = shippingService.LoadShippingRateComputationMethodBySystemName(shipment.Order.ShippingRateComputationMethodSystemName);
+                if (srcm != null &&
+                    srcm.PluginDescriptor.Installed &&
+                    srcm.IsShippingRateComputationMethodActive(_shippingSettings))
+                {
+                    var shipmentTracker = srcm.ShipmentTracker;
+                    if (shipmentTracker != null)
+                    {
+                        trackingNumberUrl = shipmentTracker.GetUrl(shipment.TrackingNumber);
+                    }
+                }
+            }
+            tokens.Add(new Token("Shipment.TrackingNumberURL", trackingNumberUrl, true));
+            tokens.Add(new Token("Shipment.Product(s)", ProductListToHtmlTable(shipment, languageId), true));
+            tokens.Add(new Token("Shipment.URLForCustomer", string.Format("{0}orderdetails/shipment/{1}", GetStoreUrl(shipment.Order.StoreId), shipment.Id), true));
+
+            //event notification
+            _eventPublisher.EntityTokensAdded(shipment, tokens);
         }
 
         public void AddStoreTokens(IList<Token> tokens, Store store, EmailAccount emailAccount)
         {
-            throw new NotImplementedException();
+            if (emailAccount == null)
+                throw new ArgumentNullException("emailAccount");
+
+            tokens.Add(new Token("Store.Name", store.GetLocalized(x => x.Name)));
+            tokens.Add(new Token("Store.URL", store.Url, true));
+            tokens.Add(new Token("Store.Email", emailAccount.Email));
+            tokens.Add(new Token("Store.CompanyName", store.CompanyName));
+            tokens.Add(new Token("Store.CompanyAddress", store.CompanyAddress));
+            tokens.Add(new Token("Store.CompanyPhoneNumber", store.CompanyPhoneNumber));
+            tokens.Add(new Token("Store.CompanyVat", store.CompanyVat));
+
+            //event notification
+            _eventPublisher.EntityTokensAdded(store, tokens);
         }
 
         public void AddVendorTokens(IList<Token> tokens, Vendor vendor)
         {
-            throw new NotImplementedException();
+            tokens.Add(new Token("Vendor.Name", vendor.Name));
+            tokens.Add(new Token("Vendor.Email", vendor.Email));
+
+            //event notification
+            _eventPublisher.EntityTokensAdded(vendor, tokens);
         }
 
         public string[] GetListOfAllowedTokens()
         {
-            throw new NotImplementedException();
+            var allowedTokens = new List<string>
+            {
+                "%Store.Name%",
+                "%Store.URL%",
+                "%Store.Email%",
+                "%Store.CompanyName%",
+                "%Store.CompanyAddress%",
+                "%Store.CompanyPhoneNumber%",
+                "%Store.CompanyVat%",
+                "%Order.OrderNumber%",
+                "%Order.CustomerFullName%",
+                "%Order.CustomerEmail%",
+                "%Order.BillingFirstName%",
+                "%Order.BillingLastName%",
+                "%Order.BillingPhoneNumber%",
+                "%Order.BillingEmail%",
+                "%Order.BillingFaxNumber%",
+                "%Order.BillingCompany%",
+                "%Order.BillingAddress1%",
+                "%Order.BillingAddress2%",
+                "%Order.BillingCity%",
+                "%Order.BillingStateProvince%",
+                "%Order.BillingZipPostalCode%",
+                "%Order.BillingCountry%",
+                "%Order.BillingCustomAttributes%",
+                "%Order.ShippingMethod%",
+                "%Order.ShippingFirstName%",
+                "%Order.ShippingLastName%",
+                "%Order.ShippingPhoneNumber%",
+                "%Order.ShippingEmail%",
+                "%Order.ShippingFaxNumber%",
+                "%Order.ShippingCompany%",
+                "%Order.ShippingAddress1%",
+                "%Order.ShippingAddress2%",
+                "%Order.ShippingCity%",
+                "%Order.ShippingStateProvince%",
+                "%Order.ShippingZipPostalCode%",
+                "%Order.ShippingCountry%",
+                "%Order.ShippingCustomAttributes%",
+                "%Order.PaymentMethod%",
+                "%Order.VatNumber%",
+                "%Order.CustomValues%",
+                "%Order.Product(s)%",
+                "%Order.CreatedOn%",
+                "%Order.OrderURLForCustomer%",
+                "%Order.NewNoteText%",
+                "%Order.AmountRefunded%",
+                "%RecurringPayment.ID%",
+                "%Shipment.ShipmentNumber%",
+                "%Shipment.TrackingNumber%",
+                "%Shipment.TrackingNumberURL%",
+                "%Shipment.Product(s)%",
+                "%Shipment.URLForCustomer%",
+                "%ReturnRequest.ID%",
+                "%ReturnRequest.OrderId%",
+                "%ReturnRequest.Product.Quantity%",
+                "%ReturnRequest.Product.Name%",
+                "%ReturnRequest.Reason%",
+                "%ReturnRequest.RequestedAction%",
+                "%ReturnRequest.CustomerComment%",
+                "%ReturnRequest.StaffNotes%",
+                "%ReturnRequest.Status%",
+                "%GiftCard.SenderName%",
+                "%GiftCard.SenderEmail%",
+                "%GiftCard.RecipientName%",
+                "%GiftCard.RecipientEmail%",
+                "%GiftCard.Amount%",
+                "%GiftCard.CouponCode%",
+                "%GiftCard.Message%",
+                "%Customer.Email%",
+                "%Customer.Username%",
+                "%Customer.FullName%",
+                "%Customer.FirstName%",
+                "%Customer.LastName%",
+                "%Customer.VatNumber%",
+                "%Customer.VatNumberStatus%",
+                "%Customer.PasswordRecoveryURL%",
+                "%Customer.AccountActivationURL%",
+                "%Vendor.Name%",
+                "%Vendor.Email%",
+                "%Wishlist.URLForCustomer%",
+                "%NewsLetterSubscription.Email%",
+                "%NewsLetterSubscription.ActivationUrl%",
+                "%NewsLetterSubscription.DeactivationUrl%",
+                "%ProductReview.ProductName%",
+                "%BlogComment.BlogPostTitle%",
+                "%NewsComment.NewsTitle%",
+                "%Product.ID%",
+                "%Product.Name%",
+                "%Product.ShortDescription%",
+                "%Product.ProductURLForCustomer%",
+                "%Product.SKU%",
+                "%Product.StockQuantity%",
+                "%Forums.TopicURL%",
+                "%Forums.TopicName%",
+                "%Forums.PostAuthor%",
+                "%Forums.PostBody%",
+                "%Forums.ForumURL%",
+                "%Forums.ForumName%",
+                "%AttributeCombination.Formatted%",
+                "%AttributeCombination.SKU%",
+                "%AttributeCombination.StockQuantity%",
+                "%PrivateMessage.Subject%",
+                "%PrivateMessage.Text%",
+                "%BackInStockSubscription.ProductName%",
+                "%BackInStockSubscription.ProductUrl%",
+            };
+            return allowedTokens.ToArray();
         }
 
         public string[] GetListOfCampaignAllowedTokens()
         {
-            throw new NotImplementedException();
+            var allowedTokens = new List<string>
+            {
+                "%Store.Name%",
+                "%Store.URL%",
+                "%Store.Email%",
+                "%Store.CompanyName%",
+                "%Store.CompanyAddress%",
+                "%Store.CompanyPhoneNumber%",
+                "%Store.CompanyVat%",
+                "%NewsLetterSubscription.Email%",
+                "%NewsLetterSubscription.ActivationUrl%",
+                "%NewsLetterSubscription.DeactivationUrl%"
+            };
+            return allowedTokens.ToArray();
         }
     }
 }

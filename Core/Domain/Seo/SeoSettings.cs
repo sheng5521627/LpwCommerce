@@ -38,6 +38,7 @@ namespace Core.Domain.Seo
         public bool GenerateProductMetaDescription { get; set; }
         /// <summary>
         /// A value indicating whether we should conver non-wetern chars to western ones
+        /// 一个值，指示是否应将非西方字符的西方国家
         /// </summary>
         public bool ConvertNonWesternChars { get; set; }
         /// <summary>

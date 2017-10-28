@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Core.Domain.Tax
 {
     /// <summary>
-    /// Represents a tax category
+    /// Represents a tax category 税种
     /// </summary>
     public partial class TaxCategory : BaseEntity
     {

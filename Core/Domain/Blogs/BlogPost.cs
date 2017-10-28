@@ -81,6 +81,8 @@ namespace Core.Domain.Blogs
         /// </summary>
         public DateTime CreatedOnUtc { get; set; }
 
+        public int CommentCount { get; set; }
+
         /// <summary>
         /// Gets or sets the blog comments
         /// </summary>

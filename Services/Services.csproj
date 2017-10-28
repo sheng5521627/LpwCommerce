@@ -34,6 +34,10 @@
       <HintPath>..\packages\Autofac.4.6.2\lib\net45\Autofac.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="EPPlus, Version=4.1.1.0, Culture=neutral, PublicKeyToken=ea159fdaa78159a1, processorArchitecture=MSIL">
+      <HintPath>..\packages\EPPlus.4.1.1\lib\net40\EPPlus.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="ImageResizer, Version=4.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\ImageResizer.4.1.10\lib\net45\ImageResizer.dll</HintPath>
       <Private>True</Private>
@@ -47,11 +51,11 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="MaxMind.Db, Version=2.0.0.0, Culture=neutral, PublicKeyToken=66afa4cc5ae853ac, processorArchitecture=MSIL">
-      <HintPath>..\packages\MaxMind.Db.2.2.0\lib\net45\MaxMind.Db.dll</HintPath>
+      <HintPath>..\packages\MaxMind.Db.2.3.0\lib\net45\MaxMind.Db.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="MaxMind.GeoIP2, Version=2.6.0.0, Culture=neutral, PublicKeyToken=66afa4cc5ae853ac, processorArchitecture=MSIL">
-      <HintPath>..\packages\MaxMind.GeoIP2.2.8.0\lib\net45\MaxMind.GeoIP2.dll</HintPath>
+      <HintPath>..\packages\MaxMind.GeoIP2.2.9.0\lib\net45\MaxMind.GeoIP2.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.Web.Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -59,7 +63,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.10.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="PerlRegex, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -113,17 +117,26 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Affiliates\AffiliateExtensions.cs" />
+    <Compile Include="Affiliates\AffiliateService.cs" />
+    <Compile Include="Affiliates\IAffiliateService.cs" />
+    <Compile Include="Blogs\BlogExtensions.cs" />
+    <Compile Include="Blogs\BlogService.cs" />
+    <Compile Include="Blogs\IBlogService.cs" />
+    <Compile Include="Catalog\BackInStockSubscriptionService.cs" />
     <Compile Include="Catalog\Cache\PriceCacheEventConsumer.cs" />
     <Compile Include="Catalog\CategoryExtensions.cs" />
     <Compile Include="Catalog\CategoryService.cs" />
     <Compile Include="Catalog\CategoryTemplateService.cs" />
     <Compile Include="Catalog\CompareProductsService.cs" />
     <Compile Include="Catalog\CopyProductService.cs" />
+    <Compile Include="Catalog\IBackInStockSubscriptionService.cs" />
     <Compile Include="Catalog\ICategoryService.cs" />
     <Compile Include="Catalog\ICategoryTemplateService.cs" />
     <Compile Include="Catalog\ICompareProductsService.cs" />
     <Compile Include="Catalog\ICopyProductService.cs" />
     <Compile Include="Catalog\IManufacturerService.cs" />
+    <Compile Include="Catalog\IManufacturerTemplateService.cs" />
     <Compile Include="Catalog\IPriceCalculationService.cs" />
     <Compile Include="Catalog\IPriceFormatter.cs" />
     <Compile Include="Catalog\IProductAttributeFormatter.cs" />
@@ -134,7 +147,9 @@
     <Compile Include="Catalog\IProductTemplateService.cs" />
     <Compile Include="Catalog\IRecentlyViewedProductsService.cs" />
     <Compile Include="Catalog\ISpecificationAttributeService.cs" />
+    <Compile Include="Catalog\ManufacturerExtensions.cs" />
     <Compile Include="Catalog\ManufacturerService.cs" />
+    <Compile Include="Catalog\ManufacturerTemplateService.cs" />
     <Compile Include="Catalog\PriceCalculationService.cs" />
     <Compile Include="Catalog\PriceFormatter.cs" />
     <Compile Include="Catalog\ProductAttributeExtensions.cs" />
@@ -149,6 +164,10 @@
     <Compile Include="Catalog\RoundingHelper.cs" />
     <Compile Include="Catalog\SpecificationAttributeService.cs" />
     <Compile Include="Catalog\TierPriceExtensions.cs" />
+    <Compile Include="Cms\IWidgetPlugin.cs" />
+    <Compile Include="Cms\IWidgetService.cs" />
+    <Compile Include="Cms\WidgetExtensions.cs" />
+    <Compile Include="Cms\WidgetService.cs" />
     <Compile Include="Common\AddressAttributeExtensions.cs" />
     <Compile Include="Common\AddressAttributeFormatter.cs" />
     <Compile Include="Common\AddressAttributeParser.cs" />
@@ -221,6 +240,11 @@
     <Compile Include="Events\IEventPublisher.cs" />
     <Compile Include="Events\ISubscriptionService.cs" />
     <Compile Include="Events\SubscriptionService.cs" />
+    <Compile Include="ExportImport\ExportManager.cs" />
+    <Compile Include="ExportImport\IExportManager.cs" />
+    <Compile Include="ExportImport\IImportManager.cs" />
+    <Compile Include="ExportImport\ImportManager.cs" />
+    <Compile Include="Forums\ForumExtensions.cs" />
     <Compile Include="Forums\ForumService.cs" />
     <Compile Include="Forums\IForumService.cs" />
     <Compile Include="Helpers\DateTimeHelper.cs" />
@@ -231,6 +255,9 @@
     <Compile Include="Infrastructure\AzureWebsitesMachineNameProvider.cs" />
     <Compile Include="Infrastructure\DefaultMachineNameProvider.cs" />
     <Compile Include="Infrastructure\IMachineNameProvider.cs" />
+    <Compile Include="Installation\CodeFirstInstallationService.cs" />
+    <Compile Include="Installation\IInstallationService.cs" />
+    <Compile Include="Installation\SqlFileInstallationService.cs" />
     <Compile Include="Localization\ILanguageService.cs" />
     <Compile Include="Localization\ILocalizationService.cs" />
     <Compile Include="Localization\ILocalizedEntityService.cs" />

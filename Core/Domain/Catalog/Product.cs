@@ -295,6 +295,7 @@ namespace Core.Domain.Catalog
         public bool DisplayStockQuantity { get; set; }
         /// <summary>
         /// Gets or sets the minimum stock quantity
+        /// 获取或设置最小库存量。
         /// </summary>
         public int MinStockQuantity { get; set; }
         /// <summary>

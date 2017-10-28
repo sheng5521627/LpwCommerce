@@ -1,5 +1,7 @@
 ﻿using Core;
 using Core.Domain.Catalog;
+using Core.Domain.Orders;
+using Core.Domain.Shipping;
 using System;
 using System.Collections.Generic;
 using System.Linq;

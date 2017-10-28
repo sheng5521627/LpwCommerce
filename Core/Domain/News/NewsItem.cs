@@ -82,6 +82,14 @@ namespace Core.Domain.News
         public DateTime CreatedOnUtc { get; set; }
 
         /// <summary>
+        /// Gets or sets the total number of comments
+        /// <remarks>
+        /// We use this property for performance optimization (no SQL command executed)
+        /// </remarks>
+        /// </summary>
+        public int CommentCount { get; set; }
+
+        /// <summary>
         /// Gets or sets the news comments
         /// </summary>
         public virtual ICollection<NewsComment> NewsComments

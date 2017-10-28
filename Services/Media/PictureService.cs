@@ -14,6 +14,7 @@ using Services.Events;
 using System.Drawing;
 using System.IO;
 using ImageResizer;
+using Services.Seo;
 
 namespace Services.Media
 {

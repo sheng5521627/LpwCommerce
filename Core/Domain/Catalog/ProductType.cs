@@ -16,7 +16,7 @@ namespace Core.Domain.Catalog
         /// </summary>
         SimpleProduct = 5,
         /// <summary>
-        /// Grouped (product with variants)
+        /// Grouped (product with variants) 分组（带有变体的产品）
         /// </summary>
         GroupedProduct = 10,
     }

@@ -29,7 +29,7 @@ namespace Core.Domain.Catalog
         public int StockQuantity { get; set; }
 
         /// <summary>
-        /// Gets or sets the reserved quantity (ordered but not shipped yet)
+        /// Gets or sets the reserved quantity (ordered but not shipped yet) 获取或设置保留数量（已订购但尚未发货）
         /// </summary>
         public int ReservedQuantity { get; set; }
 

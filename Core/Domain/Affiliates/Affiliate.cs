@@ -8,7 +8,7 @@ using Core.Domain.Common;
 namespace Core.Domain.Affiliates
 {
     /// <summary>
-    /// Represents an affiliate
+    /// Represents an affiliate 使附属
     /// </summary>
     public partial class Affiliate : BaseEntity
     {
@@ -18,7 +18,7 @@ namespace Core.Domain.Affiliates
         public int AddressId { get; set; }
 
         /// <summary>
-        /// Gets or sets the admin comment
+        /// Gets or sets the admin comment 评论
         /// </summary>
         public string AdminComment { get; set; }
 

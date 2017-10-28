@@ -19,7 +19,7 @@ namespace Services.Customers
         /// <param name="passwordFormat"></param>
         /// <param name="storeId"></param>
         /// <param name="isApproved">是否同意</param>
-        public CustomerRegistrationRequest(Customer customer,string email,string usernaem,
+        public CustomerRegistrationRequest(Customer customer,string email,string username,
             string password,PasswordFormat passwordFormat,int storeId,bool isApproved = true)
         {
             this.Customer = customer;
