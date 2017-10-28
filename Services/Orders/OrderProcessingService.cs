@@ -7,6 +7,7 @@ using Core.Domain.Payments;
 using Core.Domain.Shipping;
 using Core.Domain.Tax;
 using ImageResizer.Configuration.Logging;
+using Services.Affiliates;
 using Services.Catalog;
 using Services.Common;
 using Services.Customers;
@@ -42,7 +43,7 @@ namespace Services.Orders
         private readonly ILanguageService _languageService;
         private readonly IProductService _productService;
         private readonly IPaymentService _paymentService;
-        private readonly ILogger _logger;
+        private readonly Logging.ILogger _logger;
         private readonly IOrderTotalCalculationService _orderTotalCalculationService;
         private readonly IPriceCalculationService _priceCalculationService;
         private readonly IPriceFormatter _priceFormatter;
@@ -199,6 +200,166 @@ namespace Services.Orders
             this._taxSettings = taxSettings;
             this._localizationSettings = localizationSettings;
             this._currencySettings = currencySettings;
+        }
+
+        public void CheckOrderStatus(Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public PlaceOrderResult PlaceOrder(ProcessPaymentRequest processPaymentRequest)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void DeleteOrder(Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ProcessNextRecurringPayment(RecurringPayment recurringPayment)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IList<string> CancelRecurringPayment(RecurringPayment recurringPayment)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool CanCancelRecurringPayment(Customer customerToValidate, RecurringPayment recurringPayment)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Ship(Shipment shipment, bool notifyCustomer)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Deliver(Shipment shipment, bool notifyCustomer)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool CanCancelOrder(Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void CancelOrder(Order order, bool notifyCustomer)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool CanMarkOrderAsAuthorized(Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void MarkAsAuthorized(Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool CanCapture(Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IList<string> Capture(Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool CanMarkOrderAsPaid(Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void MarkOrderAsPaid(Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool CanRefund(Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IList<string> Refund(Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool CanRefundOffline(Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void RefundOffline(Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool CanPartiallyRefund(Order order, decimal amountToRefund)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IList<string> PartiallyRefund(Order order, decimal amountToRefund)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool CanPartiallyRefundOffline(Order order, decimal amountToRefund)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void PartiallyRefundOffline(Order order, decimal amountToRefund)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool CanVoid(Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IList<string> Void(Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool CanVoidOffline(Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void VoidOffline(Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ReOrder(Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool IsReturnRequestAllowed(Order order)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool ValidateMinOrderSubtotalAmount(IList<ShoppingCartItem> cart)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool ValidateMinOrderTotalAmount(IList<ShoppingCartItem> cart)
+        {
+            throw new NotImplementedException();
         }
 
         #endregion

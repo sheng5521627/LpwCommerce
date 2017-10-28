@@ -1,5 +1,7 @@
 ﻿using Core;
 using Core.Domain.Affiliates;
+using Core.Infrastructure;
+using Services.Seo;
 using System;
 using System.Collections.Generic;
 using System.Linq;

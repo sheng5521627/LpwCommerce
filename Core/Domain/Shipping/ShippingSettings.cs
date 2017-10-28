@@ -35,6 +35,8 @@ namespace Core.Domain.Shipping
         /// </summary>
         public bool AllowPickUpInStore { get; set; }
 
+        public decimal PickUpInStoreFee { get; set; }
+
         /// <summary>
         /// Gets or sets a value indicating whether display a pickup points in the map
         /// </summary>

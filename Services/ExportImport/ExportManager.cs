@@ -18,6 +18,8 @@ using Services.Seo;
 using Core;
 using OfficeOpenXml;
 using Services.Common;
+using OfficeOpenXml.Style;
+using System.Drawing;
 
 namespace Services.ExportImport
 {

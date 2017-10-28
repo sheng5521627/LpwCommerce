@@ -16,6 +16,7 @@ using Core.Domain.Media;
 using Core.Domain.Messages;
 using Core.Domain.News;
 using Core.Domain.Orders;
+using Core.Domain.Payments;
 using Core.Domain.Polls;
 using Core.Domain.Security;
 using Core.Domain.Seo;

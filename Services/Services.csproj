@@ -272,7 +272,6 @@
     <Compile Include="Logging\ILogger.cs" />
     <Compile Include="Logging\LoggingExtensions.cs" />
     <Compile Include="Logging\NullLogger.cs" />
-    <Compile Include="Media\AzurePictureService.cs" />
     <Compile Include="Media\DownloadService.cs" />
     <Compile Include="Media\Extensions.cs" />
     <Compile Include="Media\IDownloadService.cs" />

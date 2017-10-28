@@ -18,6 +18,8 @@ using Services.Helpers;
 using Services.Localization;
 using Services.Media;
 using Services.Stores;
+using Services.Orders;
+using Services.Payments;
 
 namespace Services.Common
 {

@@ -287,7 +287,7 @@ namespace Services.Customers
             }
             if (dayOfBirth > 0 && monthOfBirth > 0)
             {
-                string dateOfBirthStr = monthOfBirth.ToString("00", CultureInfo.InstalledUICulture) + "-" + dayOfBirth("00", CultureInfo.InstalledUICulture);
+                string dateOfBirthStr = monthOfBirth.ToString("00", CultureInfo.InstalledUICulture) + "-" + dayOfBirth.ToString("00", CultureInfo.InstalledUICulture);
                 query = query.Join(_gaRepository.Table, x => x.Id, y => y.EntityId, (x, y) => new { Customer = x, Attribute = y })
                     .Where(m => m.Attribute.KeyGroup == "Cusomer" && m.Attribute.Key == SystemCustomerAttributeNames.DateOfBirth && m.Attribute.Value.Substring(5, 5).Contains(dateOfBirthStr))
                     .Select(m => m.Customer);

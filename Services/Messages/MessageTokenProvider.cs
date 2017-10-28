@@ -533,9 +533,7 @@ namespace Services.Messages
         }
 
         #endregion
-
-        #region Methods
-
+        
         public void AddAttributeCombinationTokens(IList<Token> tokens, ProductAttributeCombination combination, int languageId)
         {
             var productAttributeFormatter = EngineContext.Current.Resolve<IProductAttributeFormatter>();
