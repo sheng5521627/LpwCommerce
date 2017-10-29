@@ -149,6 +149,46 @@ namespace Services.Orders
             return result;
         }
 
+        /// <summary>
+        /// Gets all gift cards
+        /// </summary>
+        /// <param name="purchasedWithOrderId">Associated order ID; null to load all records</param>
+        /// <param name="usedWithOrderId">The order ID in which the gift card was used; null to load all records</param>
+        /// <param name="createdFromUtc">Created date from (UTC); null to load all records</param>
+        /// <param name="createdToUtc">Created date to (UTC); null to load all records</param>
+        /// <param name="isGiftCardActivated">Value indicating whether gift card is activated; null to load all records</param>
+        /// <param name="giftCardCouponCode">Gift card coupon code; nullto load all records</param>
+        /// <param name="recipientName">Recipient name; null to load all records</param>
+        /// <param name="pageIndex">Page index</param>
+        /// <param name="pageSize">Page size</param>
+        /// <returns>Gift cards</returns>
+        public virtual IPagedList<GiftCard> GetAllGiftCardsNews(int? purchasedWithOrderId = null, int? usedWithOrderId = null,
+            DateTime? createdFromUtc = null, DateTime? createdToUtc = null,
+            bool? isGiftCardActivated = null, string giftCardCouponCode = null,
+            string recipientName = null,
+            int pageIndex = 0, int pageSize = int.MaxValue)
+        {
+            var query = _giftCardRepository.Table;
+            if (purchasedWithOrderId.HasValue)
+                query = query.Where(gc => gc.PurchasedWithOrderItem != null && gc.PurchasedWithOrderItem.OrderId == purchasedWithOrderId.Value);
+            if (usedWithOrderId.HasValue)
+                query = query.Where(gc => gc.GiftCardUsageHistory.Any(history => history.UsedWithOrderId == usedWithOrderId));
+            if (createdFromUtc.HasValue)
+                query = query.Where(gc => createdFromUtc.Value <= gc.CreatedOnUtc);
+            if (createdToUtc.HasValue)
+                query = query.Where(gc => createdToUtc.Value >= gc.CreatedOnUtc);
+            if (isGiftCardActivated.HasValue)
+                query = query.Where(gc => gc.IsGiftCardActivated == isGiftCardActivated.Value);
+            if (!String.IsNullOrEmpty(giftCardCouponCode))
+                query = query.Where(gc => gc.GiftCardCouponCode == giftCardCouponCode);
+            if (!String.IsNullOrWhiteSpace(recipientName))
+                query = query.Where(c => c.RecipientName.Contains(recipientName));
+            query = query.OrderByDescending(gc => gc.CreatedOnUtc);
+
+            var giftCards = new PagedList<GiftCard>(query, pageIndex, pageSize);
+            return giftCards;
+        }
+
         #endregion
     }
 }

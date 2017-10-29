@@ -76,5 +76,11 @@ namespace Services.Orders
         /// </summary>
         /// <returns>Result</returns>
         string GenerateGiftCardCode();
+
+        IPagedList<GiftCard> GetAllGiftCardsNews(int? purchasedWithOrderId = null, int? usedWithOrderId = null,
+            DateTime? createdFromUtc = null, DateTime? createdToUtc = null,
+            bool? isGiftCardActivated = null, string giftCardCouponCode = null,
+            string recipientName = null,
+            int pageIndex = 0, int pageSize = int.MaxValue);
     }
 }

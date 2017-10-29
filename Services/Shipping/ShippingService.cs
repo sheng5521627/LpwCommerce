@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 using Core.Domain.Common;
 using Core.Domain.Catalog;
 using Core.Domain.Customers;
+using Services.Shipping.Pickup;
 
 namespace Services.Shipping
 {
@@ -138,10 +139,55 @@ namespace Services.Shipping
         
         public IList<IShippingRateComputationMethod> LoadAllShippingRateComputationMethods(int storeId = 0)
         {
-            return _pluginFinder.GetPlugins<IShippingRateComputationMethod>(storeId: storeId).ToList();
+            return _pluginFinder.GetPluginsNews<IShippingRateComputationMethod>(storeId: storeId).ToList();
         }
 
         #endregion
+
+        /// <summary>
+        /// Load active pickup point providers
+        /// </summary>
+        /// <param name="customer">Load records allowed only to a specified customer; pass null to ignore ACL permissions</param>
+        /// <param name="storeId">Load records allowed only in a specified store; pass 0 to load all records</param>
+        /// <returns>Pickup point providers</returns>
+        public virtual IList<IPickupPointProvider> LoadActivePickupPointProviders(Customer customer = null, int storeId = 0)
+        {
+            return LoadAllPickupPointProviders(customer, storeId).Where(provider => _shippingSettings.ActivePickupPointProviderSystemNames
+                .Contains(provider.PluginDescriptor.SystemName, StringComparer.InvariantCultureIgnoreCase)).ToList();
+        }
+        /// <summary>
+        /// Load all pickup point providers
+        /// </summary>
+        /// <param name="customer">Load records allowed only to a specified customer; pass null to ignore ACL permissions</param>
+        /// <param name="storeId">Load records allowed only in a specified store; pass 0 to load all records</param>
+        /// <returns>Pickup point providers</returns>
+        public virtual IList<IPickupPointProvider> LoadAllPickupPointProviders(Customer customer = null, int storeId = 0)
+        {
+            return _pluginFinder.GetPluginsNews<IPickupPointProvider>(customer: customer, storeId: storeId).ToList();
+        }
+
+        /// <summary>
+        /// Load active shipping rate computation methods
+        /// </summary>
+        /// <param name="customer">Load records allowed only to a specified customer; pass null to ignore ACL permissions</param>
+        /// <param name="storeId">Load records allowed only in a specified store; pass 0 to load all records</param>
+        /// <returns>Shipping rate computation methods</returns>
+        public virtual IList<IShippingRateComputationMethod> LoadActiveShippingRateComputationMethods(Customer customer = null, int storeId = 0)
+        {
+            return LoadAllShippingRateComputationMethods(customer, storeId)
+                .Where(provider => _shippingSettings.ActiveShippingRateComputationMethodSystemNames
+                    .Contains(provider.PluginDescriptor.SystemName, StringComparer.InvariantCultureIgnoreCase)).ToList();
+        }
+        /// <summary>
+        /// Load all shipping rate computation methods
+        /// </summary>
+        /// <param name="customer">Load records allowed only to a specified customer; pass null to ignore ACL permissions</param>
+        /// <param name="storeId">Load records allowed only in a specified store; pass 0 to load all records</param>
+        /// <returns>Shipping rate computation methods</returns>
+        public virtual IList<IShippingRateComputationMethod> LoadAllShippingRateComputationMethods(Customer customer = null, int storeId = 0)
+        {
+            return _pluginFinder.GetPluginsNews<IShippingRateComputationMethod>(customer: customer, storeId: storeId).ToList();
+        }
 
         public void DeleteShippingMethod(ShippingMethod shippingMethod)
         {
@@ -758,6 +804,163 @@ namespace Services.Shipping
             return result;
         }
 
+        /// <summary>
+        /// Gets available pickup points
+        /// </summary>
+        /// <param name="address">Address</param>
+        /// <param name="customer">Load records allowed only to a specified customer; pass null to ignore ACL permissions</param>
+        /// <param name="providerSystemName">Filter by provider identifier; null to load pickup points of all providers</param>
+        /// <param name="storeId">Load records allowed only in a specified store; pass 0 to load all records</param>
+        /// <returns>Pickup points</returns>
+        public virtual GetPickupPointsResponse GetPickupPoints(Address address, Customer customer = null, string providerSystemName = null, int storeId = 0)
+        {
+            var result = new GetPickupPointsResponse();
+            var pickupPointsProviders = LoadActivePickupPointProviders(customer, storeId);
+            if (!string.IsNullOrEmpty(providerSystemName))
+                pickupPointsProviders = pickupPointsProviders
+                    .Where(x => x.PluginDescriptor.SystemName.Equals(providerSystemName, StringComparison.InvariantCultureIgnoreCase)).ToList();
+            if (pickupPointsProviders.Count == 0)
+                return result;
+
+            var allPickupPoints = new List<PickupPoint>();
+            foreach (var provider in pickupPointsProviders)
+            {
+                var pickPointsResponse = provider.GetPickupPoints(address);
+                if (pickPointsResponse.Success)
+                    allPickupPoints.AddRange(pickPointsResponse.PickupPoints);
+                else
+                {
+                    foreach (string error in pickPointsResponse.Errors)
+                    {
+                        result.AddError(error);
+                        _logger.Warning(string.Format("PickupPoints ({0}). {1}", provider.PluginDescriptor.FriendlyName, error));
+                    }
+                }
+            }
+
+            //any pickup points is enough
+            if (allPickupPoints.Count > 0)
+            {
+                result.Errors.Clear();
+                result.PickupPoints = allPickupPoints;
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        ///  Gets available shipping options
+        /// </summary>
+        /// <param name="cart">Shopping cart</param>
+        /// <param name="shippingAddress">Shipping address</param>
+        /// <param name="customer">Load records allowed only to a specified customer; pass null to ignore ACL permissions</param>
+        /// <param name="allowedShippingRateComputationMethodSystemName">Filter by shipping rate computation method identifier; null to load shipping options of all shipping rate computation methods</param>
+        /// <param name="storeId">Load records allowed only in a specified store; pass 0 to load all records</param>
+        /// <returns>Shipping options</returns>
+        public virtual GetShippingOptionResponse GetShippingOptions(IList<ShoppingCartItem> cart,
+            Address shippingAddress, Customer customer = null, string allowedShippingRateComputationMethodSystemName = "",
+            int storeId = 0)
+        {
+            if (cart == null)
+                throw new ArgumentNullException("cart");
+
+            var result = new GetShippingOptionResponse();
+
+            //create a package
+            bool shippingFromMultipleLocations;
+            var shippingOptionRequests = CreateShippingOptionRequests(cart, shippingAddress, storeId, out shippingFromMultipleLocations);
+            result.ShippingFromMultipleLocations = shippingFromMultipleLocations;
+
+            var shippingRateComputationMethods = LoadActiveShippingRateComputationMethods(customer, storeId);
+            //filter by system name
+            if (!String.IsNullOrWhiteSpace(allowedShippingRateComputationMethodSystemName))
+            {
+                shippingRateComputationMethods = shippingRateComputationMethods
+                    .Where(srcm => allowedShippingRateComputationMethodSystemName.Equals(srcm.PluginDescriptor.SystemName, StringComparison.InvariantCultureIgnoreCase))
+                    .ToList();
+            }
+            if (!shippingRateComputationMethods.Any())
+                //throw new NopException("Shipping rate computation method could not be loaded");
+                return result;
+
+
+
+            //request shipping options from each shipping rate computation methods
+            foreach (var srcm in shippingRateComputationMethods)
+            {
+                //request shipping options (separately for each package-request)
+                IList<ShippingOption> srcmShippingOptions = null;
+                foreach (var shippingOptionRequest in shippingOptionRequests)
+                {
+                    var getShippingOptionResponse = srcm.GetShippingOptions(shippingOptionRequest);
+
+                    if (getShippingOptionResponse.Success)
+                    {
+                        //success
+                        if (srcmShippingOptions == null)
+                        {
+                            //first shipping option request
+                            srcmShippingOptions = getShippingOptionResponse.ShippingOptions;
+                        }
+                        else
+                        {
+                            //get shipping options which already exist for prior requested packages for this scrm (i.e. common options)
+                            srcmShippingOptions = srcmShippingOptions
+                                .Where(existingso => getShippingOptionResponse.ShippingOptions.Any(newso => newso.Name == existingso.Name))
+                                .ToList();
+
+                            //and sum the rates
+                            foreach (var existingso in srcmShippingOptions)
+                            {
+                                existingso.Rate += getShippingOptionResponse
+                                    .ShippingOptions
+                                    .First(newso => newso.Name == existingso.Name)
+                                    .Rate;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        //errors
+                        foreach (string error in getShippingOptionResponse.Errors)
+                        {
+                            result.AddError(error);
+                            _logger.Warning(string.Format("Shipping ({0}). {1}", srcm.PluginDescriptor.FriendlyName, error));
+                        }
+                        //clear the shipping options in this case
+                        srcmShippingOptions = new List<ShippingOption>();
+                        break;
+                    }
+                }
+
+                //add this scrm's options to the result
+                if (srcmShippingOptions != null)
+                {
+                    foreach (var so in srcmShippingOptions)
+                    {
+                        //set system name if not set yet
+                        if (String.IsNullOrEmpty(so.ShippingRateComputationMethodSystemName))
+                            so.ShippingRateComputationMethodSystemName = srcm.PluginDescriptor.SystemName;
+                        if (_shoppingCartSettings.RoundPricesDuringCalculation)
+                            so.Rate = RoundingHelper.RoundPrice(so.Rate);
+                        result.ShippingOptions.Add(so);
+                    }
+                }
+            }
+
+            if (_shippingSettings.ReturnValidOptionsIfThereAreAny)
+            {
+                //return valid options if there are any (no matter of the errors returned by other shipping rate compuation methods).
+                if (result.ShippingOptions.Any() && result.Errors.Any())
+                    result.Errors.Clear();
+            }
+
+            //no shipping options loaded
+            if (!result.ShippingOptions.Any() && !result.Errors.Any())
+                result.Errors.Add(_localizationService.GetResource("Checkout.ShippingOptionCouldNotBeLoaded"));
+
+            return result;
+        }
         #endregion
     }
 }

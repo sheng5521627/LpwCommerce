@@ -29,5 +29,14 @@ namespace Services.Stores
         bool Authorize<T>(T entity) where T : BaseEntity, IStoreMappingSupported;
 
         bool Authorize<T>(T entity, int storeId) where T : BaseEntity, IStoreMappingSupported;
+
+        /// <summary>
+        /// Find store identifiers with granted access (mapped to the entity)
+        /// </summary>
+        /// <typeparam name="T">Type</typeparam>
+        /// <param name="entity">Wntity</param>
+        /// <returns>Store identifiers</returns>
+        int[] GetStoresIdsWithAccess<T>(T entity) where T : BaseEntity, IStoreMappingSupported;
+
     }
 }

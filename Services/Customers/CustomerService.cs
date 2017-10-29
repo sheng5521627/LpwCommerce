@@ -53,6 +53,7 @@ namespace Services.Customers
 
         private readonly IRepository<Customer> _customerRepository;
         private readonly IRepository<CustomerRole> _customerRoleRepository;
+        private readonly IRepository<CustomerPassword> _customerPasswordRepository;
         private readonly IRepository<GenericAttribute> _gaRepository;
         private readonly IRepository<Order> _orderRepository;
         private readonly IRepository<ForumPost> _forumPostRepository;
@@ -71,6 +72,92 @@ namespace Services.Customers
         private readonly CommonSettings _commonSettings;
 
         #endregion
+
+        #region Ctor
+
+        public CustomerService(ICacheManager cacheManager,
+            IRepository<Customer> customerRepository,
+            IRepository<CustomerPassword> customerPasswordRepository,
+            IRepository<CustomerRole> customerRoleRepository,
+            IRepository<GenericAttribute> gaRepository,
+            IRepository<Order> orderRepository,
+            IRepository<ForumPost> forumPostRepository,
+            IRepository<ForumTopic> forumTopicRepository,
+            IRepository<BlogComment> blogCommentRepository,
+            IRepository<NewsComment> newsCommentRepository,
+            IRepository<PollVotingRecord> pollVotingRecordRepository,
+            IRepository<ProductReview> productReviewRepository,
+            IRepository<ProductReviewHelpfulness> productReviewHelpfulnessRepository,
+            IGenericAttributeService genericAttributeService,
+            IDataProvider dataProvider,
+            IDbContext dbContext,
+            IEventPublisher eventPublisher,
+            CustomerSettings customerSettings,
+            CommonSettings commonSettings)
+        {
+            this._cacheManager = cacheManager;
+            this._customerRepository = customerRepository;
+            this._customerPasswordRepository = customerPasswordRepository;
+            this._customerRoleRepository = customerRoleRepository;
+            this._gaRepository = gaRepository;
+            this._orderRepository = orderRepository;
+            this._forumPostRepository = forumPostRepository;
+            this._forumTopicRepository = forumTopicRepository;
+            this._blogCommentRepository = blogCommentRepository;
+            this._newsCommentRepository = newsCommentRepository;
+            this._pollVotingRecordRepository = pollVotingRecordRepository;
+            this._productReviewRepository = productReviewRepository;
+            this._productReviewHelpfulnessRepository = productReviewHelpfulnessRepository;
+            this._genericAttributeService = genericAttributeService;
+            this._dataProvider = dataProvider;
+            this._dbContext = dbContext;
+            this._eventPublisher = eventPublisher;
+            this._customerSettings = customerSettings;
+            this._commonSettings = commonSettings;
+        }
+
+        #endregion
+
+        /// <summary>
+        /// Get current customer password
+        /// </summary>
+        /// <param name="customerId">Customer identifier</param>
+        /// <returns>Customer password</returns>
+        public virtual CustomerPassword GetCurrentPassword(int customerId)
+        {
+            if (customerId == 0)
+                return null;
+
+            //return the latest password
+            return GetCustomerPasswords(customerId, passwordsToReturn: 1).FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Gets customer passwords
+        /// </summary>
+        /// <param name="customerId">Customer identifier; pass null to load all records</param>
+        /// <param name="passwordFormat">Password format; pass null to load all records</param>
+        /// <param name="passwordsToReturn">Number of returning passwords; pass null to load all records</param>
+        /// <returns>List of customer passwords</returns>
+        public virtual IList<CustomerPassword> GetCustomerPasswords(int? customerId = null,
+            PasswordFormat? passwordFormat = null, int? passwordsToReturn = null)
+        {
+            var query = _customerPasswordRepository.Table;
+
+            //filter by customer
+            if (customerId.HasValue)
+                query = query.Where(password => password.CustomerId == customerId.Value);
+
+            //filter by password format
+            if (passwordFormat.HasValue)
+                query = query.Where(password => password.PasswordFormatId == (int)(passwordFormat.Value));
+
+            //get the latest passwords
+            if (passwordsToReturn.HasValue)
+                query = query.OrderByDescending(password => password.CreatedOnUtc).Take(passwordsToReturn.Value);
+
+            return query.ToList();
+        }
 
         public void DeleteCustomer(Customer customer)
         {

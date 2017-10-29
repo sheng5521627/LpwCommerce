@@ -20,5 +20,15 @@ namespace Services.Discounts
         /// Gets or sets an error that a customer should see when enterting a coupon code (in case if "IsValid" is set to "false")
         /// </summary>
         public string UserError { get; set; }
+
+        public DiscountValidationResult()
+        {
+            Errors = new List<string>();
+        }
+        
+        /// <summary>
+        /// Gets or sets the errors that a customer should see when enterting a coupon code (in case if "IsValid" is set to "false")
+        /// </summary>
+        public IList<string> Errors { get; set; }
     }
 }

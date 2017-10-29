@@ -46,6 +46,11 @@ namespace Core.Domain.Customers
         public string SystemName { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether the customers must change passwords after a specified time
+        /// </summary>
+        public bool EnablePasswordLifetime { get; set; }
+
+        /// <summary>
         /// 获取或设置该客户角色所需的产品标识符。
         /// 一旦指定的产品被购买，客户就被添加到这个客户角色中。
         /// </summary>

@@ -12,6 +12,13 @@ namespace Services.Customers
     public partial interface ICustomerService
     {
         /// <summary>
+        /// Get current customer password
+        /// </summary>
+        /// <param name="customerId">Customer identifier</param>
+        /// <returns>Customer password</returns>
+        CustomerPassword GetCurrentPassword(int customerId);
+
+        /// <summary>
         /// Gets all customers
         /// </summary>
         /// <param name="createdFromUtc">Created date from (UTC); null to load all records</param>

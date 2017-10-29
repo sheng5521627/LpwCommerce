@@ -472,5 +472,23 @@ namespace Services.Catalog
         void DeleteProductWarehouseInventory(ProductWarehouseInventory pwi);
 
         #endregion
+
+        /// <summary>
+        /// Adjust inventory
+        /// </summary>
+        /// <param name="product">Product</param>
+        /// <param name="quantityToChange">Quantity to increase or descrease</param>
+        /// <param name="attributesXml">Attributes in XML format</param>
+        /// <param name="message">Message for the stock quantity history</param>
+        void AdjustInventoryNews(Product product, int quantityToChange, string attributesXml = "", string message = "");
+
+        /// <summary>
+        /// Reverse booked inventory (if acceptable)
+        /// </summary>
+        /// <param name="product">product</param>
+        /// <param name="shipmentItem">Shipment item</param>
+        /// <returns>Quantity reversed</returns>
+        /// <param name="message">Message for the stock quantity history</param>
+        int ReverseBookedInventoryNews(Product product, ShipmentItem shipmentItem, string message = "");
     }
 }

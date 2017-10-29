@@ -178,5 +178,30 @@ namespace Services.Stores
 
             _eventPublisher.EntityUpdated(storeMapping);
         }
+
+        /// <summary>
+        /// Find store identifiers with granted access (mapped to the entity)
+        /// </summary>
+        /// <typeparam name="T">Type</typeparam>
+        /// <param name="entity">Wntity</param>
+        /// <returns>Store identifiers</returns>
+        public virtual int[] GetStoresIdsWithAccess<T>(T entity) where T : BaseEntity, IStoreMappingSupported
+        {
+            if (entity == null)
+                throw new ArgumentNullException("entity");
+
+            int entityId = entity.Id;
+            string entityName = typeof(T).Name;
+
+            string key = string.Format(STOREMAPPING_BY_ENTITYID_NAME_KEY, entityId, entityName);
+            return _cacheManager.Get(key, () =>
+            {
+                var query = from sm in _storeMappingRepository.Table
+                            where sm.EntityId == entityId &&
+                            sm.EntityName == entityName
+                            select sm.StoreId;
+                return query.ToArray();
+            });
+        }
     }
 }

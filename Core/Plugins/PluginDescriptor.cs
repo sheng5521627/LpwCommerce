@@ -14,6 +14,8 @@ namespace Core.Plugins
     /// </summary>
     public class PluginDescriptor : IComparable<PluginDescriptor>
     {
+        public virtual IList<int> LimitedToCustomerRoles { get; set; }
+
         /// <summary>
         /// 插件文件名称
         /// </summary>

@@ -68,6 +68,28 @@ namespace Services.Catalog.Cache
         public const string PRODUCT_PRICE_PATTERN_KEY = "Nop.totals.productprice";
 
         /// <summary>
+        /// Key for manufacturer IDs of a product
+        /// </summary>
+        /// <remarks>
+        /// {0} : product id
+        /// {1} : roles of the current user
+        /// {2} : current store ID
+        /// </remarks>
+        public const string PRODUCT_MANUFACTURER_IDS_MODEL_KEY = "Nop.totals.product.manufacturerids-{0}-{1}-{2}";
+        public const string PRODUCT_MANUFACTURER_IDS_PATTERN_KEY = "Nop.totals.product.manufacturerids";
+
+        /// <summary>
+        /// Key for category IDs of a product
+        /// </summary>
+        /// <remarks>
+        /// {0} : product id
+        /// {1} : roles of the current user
+        /// {2} : current store ID
+        /// </remarks>
+        public const string PRODUCT_CATEGORY_IDS_MODEL_KEY = "Nop.totals.product.categoryids-{0}-{1}-{2}";
+        public const string PRODUCT_CATEGORY_IDS_PATTERN_KEY = "Nop.totals.product.categoryids";
+
+        /// <summary>
         /// Key for category IDs of a discount
         /// </summary>
         /// <remarks>

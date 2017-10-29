@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Services.Discounts;
 
 namespace Services.Catalog
 {
@@ -158,5 +159,11 @@ namespace Services.Catalog
         /// <param name="value">Product attribute value</param>
         /// <returns>Price adjustment</returns>
         decimal GetProductAttributeValuePriceAdjustment(ProductAttributeValue value);
+
+        decimal GetSubTotal(ShoppingCartItem shoppingCartItem,
+            bool includeDiscounts,
+            out decimal discountAmount,
+            out List<DiscountForCaching> appliedDiscounts,
+            out int? maximumDiscountQty);
     }
 }

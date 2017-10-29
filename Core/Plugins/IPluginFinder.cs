@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Core.Domain.Customers;
 
 namespace Core.Plugins
 {
@@ -11,6 +12,9 @@ namespace Core.Plugins
     /// </summary>
     public interface IPluginFinder
     {
+        IEnumerable<T> GetPluginsNews<T>(LoadPluginsMode loadMode = LoadPluginsMode.InstalledOnly,
+            Customer customer = null, int storeId = 0, string group = null) where T : class, IPlugin;
+
         /// <summary>
         /// 验证插件对应的商店是否可用
         /// </summary>
@@ -18,6 +22,8 @@ namespace Core.Plugins
         /// <param name="storeId"></param>
         /// <returns></returns>
         bool AuthenticateStore(PluginDescriptor pluginDescriptor, int storeId);
+
+        bool AuthorizedForUser(PluginDescriptor pluginDescriptor, Customer customer);
 
         /// <summary>
         /// 获取插件的分组信息

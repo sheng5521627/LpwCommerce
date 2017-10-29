@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Core.Domain.Customers;
 
 namespace Services.Shipping
 {
@@ -14,6 +15,8 @@ namespace Services.Shipping
     /// </summary>
     public partial interface IShippingService
     {
+        IList<IShippingRateComputationMethod> LoadActiveShippingRateComputationMethods(Customer customer = null, int storeId = 0);
+
         /// <summary>
         /// Load active shipping rate computation methods
         /// </summary>
@@ -205,5 +208,19 @@ namespace Services.Shipping
         /// <returns>Shipping options</returns>
         GetShippingOptionResponse GetShippingOptions(IList<ShoppingCartItem> cart, Address shippingAddress,
             string allowedShippingRateComputationMethodSystemName = "", int storeId = 0);
+
+        /// <summary>
+        /// Gets available pickup points
+        /// </summary>
+        /// <param name="address">Address</param>
+        /// <param name="customer">Load records allowed only to a specified customer; pass null to ignore ACL permissions</param>
+        /// <param name="providerSystemName">Filter by provider identifier; null to load pickup points of all providers</param>
+        /// <param name="storeId">Load records allowed only in a specified store; pass 0 to load all records</param>
+        /// <returns>Pickup points</returns>
+        GetPickupPointsResponse GetPickupPoints(Address address, Customer customer = null, string providerSystemName = null, int storeId = 0);
+
+        GetShippingOptionResponse GetShippingOptions(IList<ShoppingCartItem> cart, Address shippingAddress,
+           Customer customer = null, string allowedShippingRateComputationMethodSystemName = "", int storeId = 0);
+
     }
 }

@@ -15,7 +15,9 @@ using Services.Events;
 using Core.Domain.Orders;
 using Services.Orders;
 using Core.Infrastructure;
+using Services.Customers;
 using Services.Discounts.Cache;
+using Services.Catalog;
 
 namespace Services.Discounts
 {
@@ -55,6 +57,7 @@ namespace Services.Discounts
         private readonly IRepository<DiscountRequirement> _discountRequirementRepository;
         private readonly IRepository<DiscountUsageHistory> _discountUsageHistoryRepository;
         private readonly ICacheManager _cacheManager;
+        private readonly ICategoryService _categoryService;
         private readonly IStoreContext _storeContext;
         private readonly IGenericAttributeService _genericAttributeService;
         private readonly ILocalizationService _localizationService;
@@ -85,7 +88,8 @@ namespace Services.Discounts
             IGenericAttributeService genericAttributeService,
             ILocalizationService localizationService,
             IPluginFinder pluginFinder,
-            IEventPublisher eventPublisher)
+            IEventPublisher eventPublisher,
+            ICategoryService categoryService)
         {
             this._cacheManager = cacheManager;
             this._discountRepository = discountRepository;
@@ -96,15 +100,211 @@ namespace Services.Discounts
             this._localizationService = localizationService;
             this._pluginFinder = pluginFinder;
             this._eventPublisher = eventPublisher;
+            this._categoryService = categoryService;
         }
+
+        /// <summary>
+        /// Get requirements for caching
+        /// </summary>
+        /// <param name="requirements">Collection of discount requirement</param>
+        /// <returns>List of DiscountRequirementForCaching</returns>
+        protected IList<DiscountRequirementForCaching> GetReqirementsForCaching(IEnumerable<DiscountRequirement> requirements)
+        {
+            var requirementForCaching = requirements.Select(requirement => new DiscountRequirementForCaching
+            {
+                Id = requirement.Id,
+                IsGroup = requirement.IsGroup,
+                SystemName = requirement.DiscountRequirementRuleSystemName,
+                InteractionType = requirement.InteractionType,
+                ChildRequirements = GetReqirementsForCaching(requirement.ChildRequirements)
+            });
+
+            return requirementForCaching.ToList();
+        }
+
+        /// <summary>
+        /// Get discount validation result
+        /// </summary>
+        /// <param name="requirements">Collection of discount requirement</param>
+        /// <param name="groupInteractionType">Interaction type within the group of requirements</param>
+        /// <param name="customer">Customer</param>
+        /// <param name="errors">Errors</param>
+        /// <returns>True if result is valid; otherwise false</returns>
+        protected bool GetValidationResult(IEnumerable<DiscountRequirementForCaching> requirements,
+            RequirementGroupInteractionType groupInteractionType, Customer customer, List<string> errors)
+        {
+            var result = false;
+
+            foreach (var requirement in requirements)
+            {
+                if (requirement.IsGroup)
+                {
+                    //get child requirements for the group
+                    var interactionType = requirement.InteractionType.HasValue
+                        ? requirement.InteractionType.Value : RequirementGroupInteractionType.And;
+                    result = GetValidationResult(requirement.ChildRequirements, interactionType, customer, errors);
+                }
+                else
+                {
+                    //or try to get validation result for the requirement
+                    var requirementRulePlugin = LoadDiscountRequirementRuleBySystemName(requirement.SystemName);
+                    if (requirementRulePlugin == null)
+                        continue;
+
+                    if (!_pluginFinder.AuthorizedForUser(requirementRulePlugin.PluginDescriptor, customer))
+                        continue;
+
+                    if (!_pluginFinder.AuthenticateStore(requirementRulePlugin.PluginDescriptor, _storeContext.CurrentStore.Id))
+                        continue;
+
+                    var ruleResult = requirementRulePlugin.CheckRequirement(new DiscountRequirementValidationRequest
+                    {
+                        DiscountRequirementId = requirement.Id,
+                        Customer = customer,
+                        Store = _storeContext.CurrentStore
+                    });
+
+                    //add validation error
+                    if (!ruleResult.IsValid)
+                        errors.Add(ruleResult.UserError);
+
+                    result = ruleResult.IsValid;
+                }
+
+                //all requirements must be met, so return false
+                if (!result && groupInteractionType == RequirementGroupInteractionType.And)
+                    return result;
+
+                //any of requirements must be met, so return true
+                if (result && groupInteractionType == RequirementGroupInteractionType.Or)
+                    return result;
+            }
+
+            return result;
+        }
+
+        #region Discounts (caching)
+
+        /// <summary>
+        /// Gets all discounts (cachable models)
+        /// </summary>
+        /// <param name="discountType">Discount type; null to load all discount</param>
+        /// <param name="couponCode">Coupon code to find (exact match)</param>
+        /// <param name="discountName">Discount name</param>
+        /// <param name="showHidden">A value indicating whether to show hidden records</param>
+        /// <returns>Discounts</returns>
+        public virtual IList<DiscountForCaching> GetAllDiscountsForCaching(DiscountType? discountType = null,
+            string couponCode = "", string discountName = "", bool showHidden = false)
+        {
+            //we cache discounts between requests. Otherwise, they will be loaded for almost each HTTP request
+            //we have to use the following workaround with cachable model (DiscountForCaching) because
+            //Entity Framework doesn't support 2-level caching
+
+            //we load all discounts, and filter them using "discountType" parameter later (in memory)
+            //we do it because we know that this method is invoked several times per HTTP request with distinct "discountType" parameter
+            //that's why let's access the database only once
+            string key = string.Format(DiscountEventConsumer.DISCOUNT_ALL_KEY, showHidden, couponCode, discountName);
+            var result = _cacheManager.Get(key, () =>
+            {
+                var discounts = GetAllDiscounts(null, couponCode, discountName, showHidden);
+                return discounts.Select(d => d.MapDiscount()).ToList();
+            });
+            //we know that this method is usually inkoved multiple times
+            //that's why we filter discounts by type on the application layer
+            if (discountType.HasValue)
+            {
+                result = result.Where(d => d.DiscountType == discountType.Value).ToList();
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Get category identifiers to which a discount is applied
+        /// </summary>
+        /// <param name="discount">Discount</param>
+        /// <param name="customer">Customer</param>
+        /// <returns>Category identifiers</returns>
+        public virtual IList<int> GetAppliedCategoryIds(DiscountForCaching discount, Customer customer)
+        {
+            if (discount == null)
+                throw new ArgumentNullException("discount");
+
+            var discountId = discount.Id;
+            var cacheKey = string.Format(DiscountEventConsumer.DISCOUNT_CATEGORY_IDS_MODEL_KEY,
+                discountId,
+                string.Join(",", customer.GetCustomerRoleIds()),
+                _storeContext.CurrentStore.Id);
+            var result = _cacheManager.Get(cacheKey, () =>
+            {
+                var ids = new List<int>();
+                var rootCategoryIds = _discountRepository.Table.Where(x => x.Id == discountId)
+                        .SelectMany(x => x.AppliedToCategories.Select(c => c.Id))
+                        .ToList();
+                foreach (var categoryId in rootCategoryIds)
+                {
+                    if (!ids.Contains(categoryId))
+                        ids.Add(categoryId);
+                    if (discount.AppliedToSubCategories)
+                    {
+                        //include subcategories
+                        foreach (var childCategoryId in _categoryService
+                            .GetAllCategoriesByParentCategoryId(categoryId, false, true)
+                            .Select(x => x.Id))
+                        {
+                            if (!ids.Contains(childCategoryId))
+                                ids.Add(childCategoryId);
+                        }
+                    }
+                }
+                return ids;
+            });
+
+            return result;
+        }
+
+        /// <summary>
+        /// Get manufacturer identifiers to which a discount is applied
+        /// </summary>
+        /// <param name="discount">Discount</param>
+        /// <param name="customer">Customer</param>
+        /// <returns>Manufacturer identifiers</returns>
+        public virtual IList<int> GetAppliedManufacturerIds(DiscountForCaching discount, Customer customer)
+        {
+            if (discount == null)
+                throw new ArgumentNullException("discount");
+
+            var discountId = discount.Id;
+            var cacheKey = string.Format(DiscountEventConsumer.DISCOUNT_MANUFACTURER_IDS_MODEL_KEY,
+                discountId,
+                string.Join(",", customer.GetCustomerRoleIds()),
+                _storeContext.CurrentStore.Id);
+            var result = _cacheManager.Get(cacheKey, () =>
+            {
+                return _discountRepository.Table.Where(x => x.Id == discountId)
+                    .SelectMany(x => x.AppliedToManufacturers.Select(c => c.Id))
+                    .ToList();
+            });
+
+            return result;
+        }
+
+        #endregion
 
         #region Nested classes
 
         [Serializable]
         public class DiscountRequirementForCaching
         {
+            public DiscountRequirementForCaching()
+            {
+                ChildRequirements = new List<DiscountRequirementForCaching>();
+            }
+
             public int Id { get; set; }
             public string SystemName { get; set; }
+            public bool IsGroup { get; set; }
+            public RequirementGroupInteractionType? InteractionType { get; set; }
+            public IList<DiscountRequirementForCaching> ChildRequirements { get; set; }
         }
 
         #endregion
@@ -376,6 +576,173 @@ namespace Services.Discounts
 
             result.IsValid = true;
             return result;
+        }
+
+         /// <summary>
+        /// Validate discount
+        /// </summary>
+        /// <param name="discount">Discount</param>
+        /// <param name="customer">Customer</param>
+        /// <returns>Discount validation result</returns>
+        public virtual DiscountValidationResult ValidateDiscount(DiscountForCaching discount, Customer customer)
+        {
+            if (discount == null)
+                throw new ArgumentNullException("discount");
+
+            if (customer == null)
+                throw new ArgumentNullException("customer");
+
+            string[] couponCodesToValidate = customer.ParseAppliedDiscountCouponCodes();
+            return ValidateDiscount(discount, customer, couponCodesToValidate);
+        }
+
+        /// <summary>
+        /// Validate discount
+        /// </summary>
+        /// <param name="discount">Discount</param>
+        /// <param name="customer">Customer</param>
+        /// <param name="couponCodesToValidate">Coupon codes to validate</param>
+        /// <returns>Discount validation result</returns>
+        public virtual DiscountValidationResult ValidateDiscount(DiscountForCaching discount, Customer customer, string[] couponCodesToValidate)
+        {
+            if (discount == null)
+                throw new ArgumentNullException("discount");
+
+            if (customer == null)
+                throw new ArgumentNullException("customer");
+
+            //invalid by default
+            var result = new DiscountValidationResult();
+
+            //check coupon code
+            if (discount.RequiresCouponCode)
+            {
+                if (String.IsNullOrEmpty(discount.CouponCode))
+                    return result;
+
+                if (couponCodesToValidate == null)
+                    return result;
+
+                if (!couponCodesToValidate.Any(x => x.Equals(discount.CouponCode, StringComparison.InvariantCultureIgnoreCase)))
+                    return result;
+            }
+
+            //Do not allow discounts applied to order subtotal or total when a customer has gift cards in the cart.
+            //Otherwise, this customer can purchase gift cards with discount and get more than paid ("free money").
+            if (discount.DiscountType == DiscountType.AssignedToOrderSubTotal ||
+                discount.DiscountType == DiscountType.AssignedToOrderTotal)
+            {
+                var cart = customer.ShoppingCartItems
+                    .Where(sci => sci.ShoppingCartType == ShoppingCartType.ShoppingCart)
+                    .LimitPerStore(_storeContext.CurrentStore.Id)
+                    .ToList();
+
+                var hasGiftCards = cart.Any(x => x.Product.IsGiftCard);
+                if (hasGiftCards)
+                {
+                    result.Errors = new List<string> { _localizationService.GetResource("ShoppingCart.Discount.CannotBeUsedWithGiftCards") };
+                    return result;
+                }
+            }
+
+            //check date range
+            DateTime now = DateTime.UtcNow;
+            if (discount.StartDateUtc.HasValue)
+            {
+                DateTime startDate = DateTime.SpecifyKind(discount.StartDateUtc.Value, DateTimeKind.Utc);
+                if (startDate.CompareTo(now) > 0)
+                {
+                    result.Errors = new List<string> { _localizationService.GetResource("ShoppingCart.Discount.NotStartedYet") };
+                    return result;
+                }
+            }
+            if (discount.EndDateUtc.HasValue)
+            {
+                DateTime endDate = DateTime.SpecifyKind(discount.EndDateUtc.Value, DateTimeKind.Utc);
+                if (endDate.CompareTo(now) < 0)
+                {
+                    result.Errors = new List<string> { _localizationService.GetResource("ShoppingCart.Discount.Expired") };
+                    return result;
+                }
+            }
+
+            //discount limitation
+            switch (discount.DiscountLimitation)
+            {
+                case DiscountLimitationType.NTimesOnly:
+                    {
+                        var usedTimes = GetAllDiscountUsageHistory(discount.Id, null, null, 0, 1).TotalCount;
+                        if (usedTimes >= discount.LimitationTimes)
+                            return result;
+                    }
+                    break;
+                case DiscountLimitationType.NTimesPerCustomer:
+                    {
+                        if (customer.IsRegistered())
+                        {
+                            var usedTimes = GetAllDiscountUsageHistory(discount.Id, customer.Id, null, 0, 1).TotalCount;
+                            if (usedTimes >= discount.LimitationTimes)
+                            {
+                                result.Errors = new List<string> { _localizationService.GetResource("ShoppingCart.Discount.CannotBeUsedAnymore") };
+                                return result;
+                            }
+                        }
+                    }
+                    break;
+                case DiscountLimitationType.Unlimited:
+                default:
+                    break;
+            }
+
+            //discount requirements
+            string key = string.Format(DiscountEventConsumer.DISCOUNT_REQUIREMENT_MODEL_KEY, discount.Id);
+            var requirementsForCaching = _cacheManager.Get(key, () =>
+            {
+                var requirements = GetAllDiscountRequirements(discount.Id, true);
+                return GetReqirementsForCaching(requirements);
+            });
+
+            //get top-level group
+            var topLevelGroup = requirementsForCaching.FirstOrDefault();
+            if (topLevelGroup == null || (topLevelGroup.IsGroup && !topLevelGroup.ChildRequirements.Any()) || !topLevelGroup.InteractionType.HasValue)
+            {
+                //there are no requirements, so discount is valid
+                result.IsValid = true;
+                return result;
+            }
+
+            //requirements are exist, let's check them
+            var errors = new List<string>();
+            result.IsValid = GetValidationResult(requirementsForCaching, topLevelGroup.InteractionType.Value, customer, errors);
+
+            //set errors if result is not valid
+            if (!result.IsValid)
+                result.Errors = errors;
+
+            return result;
+        }
+
+        /// <summary>
+        /// Get all discount requirements
+        /// </summary>
+        /// <param name="discountId">Discont identifier</param>
+        /// <param name="topLevelOnly">Whether to load top-level requirements only (without parent identifier)</param>
+        /// <returns>Requirements</returns>
+        public virtual IList<DiscountRequirement> GetAllDiscountRequirements(int discountId = 0, bool topLevelOnly = false)
+        {
+            var query = _discountRequirementRepository.Table;
+
+            //filter by discount
+            if (discountId > 0)
+                query = query.Where(requirement => requirement.DiscountId == discountId);
+
+            //filter by top-level
+            if (topLevelOnly)
+                query = query.Where(requirement => !requirement.ParentId.HasValue);
+
+            query = query.OrderBy(requirement => requirement.Id);
+
+            return query.ToList();
         }
 
         public DiscountUsageHistory GetDiscountUsageHistoryById(int discountUsageHistoryId)

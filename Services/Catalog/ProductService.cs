@@ -70,6 +70,7 @@ namespace Services.Catalog
         private readonly IEventPublisher _eventPublisher;
         private readonly IAclService _aclService;
         private readonly IStoreMappingService _storeMappingService;
+        private readonly IRepository<StockQuantityHistory> _stockQuantityHistoryRepository;
 
         #endregion
 
@@ -127,7 +128,8 @@ namespace Services.Catalog
             CatalogSettings catalogSettings,
             IEventPublisher eventPublisher,
             IAclService aclService,
-            IStoreMappingService storeMappingService)
+            IStoreMappingService storeMappingService,
+            IRepository<StockQuantityHistory> stockQuantityHistoryRepository)
         {
             this._cacheManager = cacheManager;
             this._productRepository = productRepository;
@@ -154,6 +156,7 @@ namespace Services.Catalog
             this._eventPublisher = eventPublisher;
             this._aclService = aclService;
             this._storeMappingService = storeMappingService;
+            this._stockQuantityHistoryRepository = stockQuantityHistoryRepository;
         }
 
         public void DeleteProduct(Product product)
@@ -1140,6 +1143,8 @@ namespace Services.Catalog
             //}
         }
 
+        
+
         /// <summary>
         /// 储备库存
         /// </summary>
@@ -1603,5 +1608,222 @@ namespace Services.Catalog
             _cacheManager.RemoveByPattern(PRODUCTS_PATTERN_KEY);
         }
         #endregion
+
+        /// <summary>
+        /// Adjust inventory
+        /// </summary>
+        /// <param name="product">Product</param>
+        /// <param name="quantityToChange">Quantity to increase or descrease</param>
+        /// <param name="attributesXml">Attributes in XML format</param>
+        /// <param name="message">Message for the stock quantity history</param>
+        public virtual void AdjustInventoryNews(Product product, int quantityToChange, string attributesXml = "", string message = "")
+        {
+            if (product == null)
+                throw new ArgumentNullException("product");
+
+            if (quantityToChange == 0)
+                return;
+
+            if (product.ManageInventoryMethod == ManageInventoryMethod.ManageStock)
+            {
+                //previous stock
+                var prevStockQuantity = product.GetTotalStockQuantity();
+
+                //update stock quantity
+                if (product.UseMultipleWarehouses)
+                {
+                    //use multiple warehouses
+                    if (quantityToChange < 0)
+                        ReserveInventory(product, quantityToChange);
+                    else
+                        UnblockReservedInventory(product, quantityToChange);
+                }
+                else
+                {
+                    //do not use multiple warehouses
+                    //simple inventory management
+                    product.StockQuantity += quantityToChange;
+                    UpdateProduct(product);
+
+                    //quantity change history
+                    AddStockQuantityHistoryEntry(product, quantityToChange, product.StockQuantity, product.WarehouseId, message);
+                }
+
+                //qty is reduced. check if minimum stock quantity is reached
+                if (quantityToChange < 0 && product.MinStockQuantity >= product.GetTotalStockQuantity())
+                {
+                    //what should we do now? disable buy button, unpublish the product, or do nothing? check "Low stock activity" property
+                    switch (product.LowStockActivity)
+                    {
+                        case LowStockActivity.DisableBuyButton:
+                            product.DisableBuyButton = true;
+                            product.DisableWishlistButton = true;
+                            UpdateProduct(product);
+                            break;
+                        case LowStockActivity.Unpublish:
+                            product.Published = false;
+                            UpdateProduct(product);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                //qty is increased. product is back in stock (minimum stock quantity is reached again)?
+                if (_catalogSettings.PublishBackProductWhenCancellingOrders)
+                {
+                    if (quantityToChange > 0 && prevStockQuantity <= product.MinStockQuantity && product.MinStockQuantity < product.GetTotalStockQuantity())
+                    {
+                        switch (product.LowStockActivity)
+                        {
+                            case LowStockActivity.DisableBuyButton:
+                                product.DisableBuyButton = false;
+                                product.DisableWishlistButton = false;
+                                UpdateProduct(product);
+                                break;
+                            case LowStockActivity.Unpublish:
+                                product.Published = true;
+                                UpdateProduct(product);
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+
+                //send email notification
+                if (quantityToChange < 0 && product.GetTotalStockQuantity() < product.NotifyAdminForQuantityBelow)
+                {
+                    _workflowMessageService.SendQuantityBelowStoreOwnerNotification(product, _localizationSettings.DefaultAdminLanguageId);
+                }
+            }
+
+            if (product.ManageInventoryMethod == ManageInventoryMethod.ManageStockByAttributes)
+            {
+                var combination = _productAttributeParser.FindProductAttributeCombination(product, attributesXml);
+                if (combination != null)
+                {
+                    combination.StockQuantity += quantityToChange;
+                    _productAttributeService.UpdateProductAttributeCombination(combination);
+
+                    //quantity change history
+                    AddStockQuantityHistoryEntry(product, quantityToChange, combination.StockQuantity, message: message, combinationId: combination.Id);
+
+                    //send email notification
+                    if (quantityToChange < 0 && combination.StockQuantity < combination.NotifyAdminForQuantityBelow)
+                    {
+                        _workflowMessageService.SendQuantityBelowStoreOwnerNotification(combination, _localizationSettings.DefaultAdminLanguageId);
+                    }
+                }
+            }
+
+
+            //bundled products
+            var attributeValues = _productAttributeParser.ParseProductAttributeValues(attributesXml);
+            foreach (var attributeValue in attributeValues)
+            {
+                if (attributeValue.AttributeValueType == AttributeValueType.AssociatedToProduct)
+                {
+                    //associated product (bundle)
+                    var associatedProduct = GetProductById(attributeValue.AssociatedProductId);
+                    if (associatedProduct != null)
+                    {
+                        AdjustInventoryNews(associatedProduct, quantityToChange * attributeValue.Quantity, message);
+                    }
+                }
+            }
+
+            //TODO send back in stock notifications?
+            //also do not forget to uncomment some code above ("prevStockQuantity")
+            //if (product.ManageInventoryMethod == ManageInventoryMethod.ManageStock &&
+            //    product.BackorderMode == BackorderMode.NoBackorders &&
+            //    product.AllowBackInStockSubscriptions &&
+            //    product.GetTotalStockQuantity() > 0 &&
+            //    prevStockQuantity <= 0 &&
+            //    product.Published &&
+            //    !product.Deleted)
+            //{
+            //    //_backInStockSubscriptionService.SendNotificationsToSubscribers(product);
+            //}
+        }
+
+        /// <summary>
+        /// Add stock quantity change entry
+        /// </summary>
+        /// <param name="product">Product</param>
+        /// <param name="quantityAdjustment">Quantity adjustment</param>
+        /// <param name="stockQuantity">Current stock quantity</param>
+        /// <param name="warehouseId">Warehouse identifier</param>
+        /// <param name="message">Message</param>
+        /// <param name="combinationId">Product attribute combination identifier</param>
+        public virtual void AddStockQuantityHistoryEntry(Product product, int quantityAdjustment, int stockQuantity,
+            int warehouseId = 0, string message = "", int? combinationId = null)
+        {
+            if (product == null)
+                throw new ArgumentNullException("product");
+
+            if (quantityAdjustment == 0)
+                return;
+
+            var historyEntry = new StockQuantityHistory
+            {
+                ProductId = product.Id,
+                CombinationId = combinationId,
+                WarehouseId = warehouseId > 0 ? (int?)warehouseId : null,
+                QuantityAdjustment = quantityAdjustment,
+                StockQuantity = stockQuantity,
+                Message = message,
+                CreatedOnUtc = DateTime.UtcNow
+            };
+
+            _stockQuantityHistoryRepository.Insert(historyEntry);
+
+            //event notification
+            _eventPublisher.EntityInserted(historyEntry);
+        }
+
+        /// <summary>
+        /// Reverse booked inventory (if acceptable)
+        /// </summary>
+        /// <param name="product">product</param>
+        /// <param name="shipmentItem">Shipment item</param>
+        /// <param name="message">Message for the stock quantity history</param>
+        /// <returns>Quantity reversed</returns>
+        public virtual int ReverseBookedInventoryNews(Product product, ShipmentItem shipmentItem, string message = "")
+        {
+            if (product == null)
+                throw new ArgumentNullException("product");
+
+            if (shipmentItem == null)
+                throw new ArgumentNullException("shipmentItem");
+
+            //only products with "use multiple warehouses" are handled this way
+            if (product.ManageInventoryMethod != ManageInventoryMethod.ManageStock)
+                return 0;
+            if (!product.UseMultipleWarehouses)
+                return 0;
+
+            var pwi = product.ProductWarehouseInventory.FirstOrDefault(x => x.WarehouseId == shipmentItem.WarehouseId);
+            if (pwi == null)
+                return 0;
+
+            var shipment = shipmentItem.Shipment;
+
+            //not shipped yet? hence "BookReservedInventory" method was not invoked
+            if (!shipment.ShippedDateUtc.HasValue)
+                return 0;
+
+            var qty = shipmentItem.Quantity;
+
+            pwi.StockQuantity += qty;
+            pwi.ReservedQuantity += qty;
+            UpdateProduct(product);
+
+            //quantity change history
+            AddStockQuantityHistoryEntry(product, qty, pwi.StockQuantity, shipmentItem.WarehouseId, message);
+
+            //TODO add support for bundled products (AttributesXml)
+
+            return qty;
+        }
     }
 }

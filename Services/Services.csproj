@@ -226,8 +226,10 @@
     <Compile Include="Directory\MeasureService.cs" />
     <Compile Include="Directory\StateProvinceService.cs" />
     <Compile Include="Directory\UpdateExchangeRateTask.cs" />
+    <Compile Include="Discounts\Cache\DiscountEventConsumer.cs" />
     <Compile Include="Discounts\Cache\DiscountRequirementEventConsumer.cs" />
     <Compile Include="Discounts\DiscountExtensions.cs" />
+    <Compile Include="Discounts\DiscountForCaching.cs" />
     <Compile Include="Discounts\DiscountRequirementValidationRequest.cs" />
     <Compile Include="Discounts\DiscountRequirementValidationResult.cs" />
     <Compile Include="Discounts\DiscountService.cs" />
@@ -306,10 +308,12 @@
     <Compile Include="Orders\CheckoutAttributeFormatter.cs" />
     <Compile Include="Orders\CheckoutAttributeParser.cs" />
     <Compile Include="Orders\CheckoutAttributeService.cs" />
+    <Compile Include="Orders\CustomNumberFormatter.cs" />
     <Compile Include="Orders\GiftCardService.cs" />
     <Compile Include="Orders\ICheckoutAttributeFormatter.cs" />
     <Compile Include="Orders\ICheckoutAttributeParser.cs" />
     <Compile Include="Orders\ICheckoutAttributeService.cs" />
+    <Compile Include="Orders\ICustomNumberFormatter.cs" />
     <Compile Include="Orders\IGiftCardService.cs" />
     <Compile Include="Orders\IOrderProcessingService.cs" />
     <Compile Include="Orders\IOrderReportService.cs" />
@@ -328,6 +332,7 @@
     <Compile Include="Orders\RewardPointService.cs" />
     <Compile Include="Orders\ShoppingCartExtensions.cs" />
     <Compile Include="Orders\ShoppingCartService.cs" />
+    <Compile Include="Orders\UpdateOrderParameters.cs" />
     <Compile Include="Payments\CancelRecurringPaymentRequest.cs" />
     <Compile Include="Payments\CancelRecurringPaymentResult.cs" />
     <Compile Include="Payments\CapturePaymentRequest.cs" />
@@ -368,11 +373,14 @@
     <Compile Include="Seo\UpdateFrequency.cs" />
     <Compile Include="Seo\UrlRecordService.cs" />
     <Compile Include="Shipping\EventPublisherExtensions.cs" />
+    <Compile Include="Shipping\GetPickupPointsResponse.cs" />
     <Compile Include="Shipping\GetShippingOptionRequest.cs" />
     <Compile Include="Shipping\GetShippingOptionResponse.cs" />
     <Compile Include="Shipping\IShipmentService.cs" />
     <Compile Include="Shipping\IShippingRateComputationMethod.cs" />
     <Compile Include="Shipping\IShippingService.cs" />
+    <Compile Include="Shipping\Pickup\GetPickupPointsResponse.cs" />
+    <Compile Include="Shipping\Pickup\IPickupPointProvider.cs" />
     <Compile Include="Shipping\ShipmentService.cs" />
     <Compile Include="Shipping\ShippingExtensions.cs" />
     <Compile Include="Shipping\ShippingRateComputationMethodType.cs" />

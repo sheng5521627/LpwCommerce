@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Core.Domain.Customers;
 
 namespace Services.Catalog
 {
@@ -15,6 +16,31 @@ namespace Services.Catalog
     /// </summary>
     public static class ProductExtensions
     {
+        /// <summary>
+        /// Gets a preferred tier price
+        /// </summary>
+        /// <param name="product">Product</param>
+        /// <param name="customer">Customer</param>
+        /// <param name="storeId">Store identifier</param>
+        /// <param name="quantity">Quantity</param>
+        /// <returns>Tier price</returns>
+        public static TierPrice GetPreferredTierPrice(this Product product, Customer customer, int storeId, int quantity)
+        {
+            if (!product.HasTierPrices)
+                return null;
+
+            //get actual tier prices
+            var actualTierPrices = product.TierPrices.OrderBy(price => price.Quantity).ToList()
+                .FilterByStore(storeId)
+                .FilterForCustomer(customer)
+                .FilterByDate()
+                .RemoveDuplicatedQuantities();
+
+            //get the most suitable tier price based on the passed quantity
+            var tierPrice = actualTierPrices.LastOrDefault(price => quantity >= price.Quantity);
+            return tierPrice;
+        }
+
         /// <summary>
         /// Get product special price
         /// </summary>

@@ -41,5 +41,24 @@ namespace Services.Orders
         /// <param name="storeId">Store identifier; pass </param>
         /// <returns>Balance</returns>
         int GetRewardPointsBalance(int customerId, int storeId);
+
+        void UpdateRewardPointsHistoryEntry(RewardPointsHistory rewardPointsHistory);
+
+        /// <summary>
+        /// Gets a reward point history entry
+        /// </summary>
+        /// <param name="rewardPointsHistoryId">Reward point history entry identifier</param>
+        /// <returns>Reward point history entry</returns>
+        RewardPointsHistory GetRewardPointsHistoryEntryById(int rewardPointsHistoryId);
+
+        /// <summary>
+        /// Delete the reward point history entry
+        /// </summary>
+        /// <param name="rewardPointsHistory">Reward point history entry</param>
+        void DeleteRewardPointsHistoryEntry(RewardPointsHistory rewardPointsHistory);
+
+        int AddRewardPointsHistoryEntryNews(Customer customer,
+            int points, int storeId, string message = "",
+            Order usedWithOrder = null, decimal usedAmount = 0M, DateTime? activatingDate = null);
     }
 }
