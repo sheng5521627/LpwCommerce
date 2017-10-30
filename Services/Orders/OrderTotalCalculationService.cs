@@ -1427,5 +1427,198 @@ namespace Services.Orders
         }
 
         #endregion
+
+        /// <summary>
+        /// Gets shopping cart subtotal
+        /// </summary>
+        /// <param name="cart">Cart</param>
+        /// <param name="includingTax">A value indicating whether calculated price should include tax</param>
+        /// <param name="discountAmount">Applied discount amount</param>
+        /// <param name="appliedDiscount">Applied discount</param>
+        /// <param name="subTotalWithoutDiscount">Sub total (without discount)</param>
+        /// <param name="subTotalWithDiscount">Sub total (with discount)</param>
+        public virtual void GetShoppingCartSubTotal(IList<ShoppingCartItem> cart,
+            bool includingTax,
+            out decimal discountAmount, out Discount appliedDiscount,
+            out decimal subTotalWithoutDiscount, out decimal subTotalWithDiscount)
+        {
+            SortedDictionary<decimal, decimal> taxRates;
+            GetShoppingCartSubTotal(cart, includingTax,
+                out discountAmount, out appliedDiscount,
+                out subTotalWithoutDiscount, out subTotalWithDiscount, out taxRates);
+        }
+
+        public virtual void GetShoppingCartSubTotal(IList<ShoppingCartItem> cart,
+            bool includingTax,
+            out decimal discountAmount, out Discount appliedDiscount,
+            out decimal subTotalWithoutDiscount, out decimal subTotalWithDiscount,
+            out SortedDictionary<decimal, decimal> taxRates)
+        {
+            discountAmount = decimal.Zero;
+            appliedDiscount = null;
+            subTotalWithoutDiscount = decimal.Zero;
+            subTotalWithDiscount = decimal.Zero;
+            taxRates = new SortedDictionary<decimal, decimal>();
+
+            if (cart.Count == 0)
+                return;
+
+            //get the customer 
+            Customer customer = cart.GetCustomer();
+
+            //sub totals
+            decimal subTotalExclTaxWithoutDiscount = decimal.Zero;
+            decimal subTotalInclTaxWithoutDiscount = decimal.Zero;
+            foreach (var shoppingCartItem in cart)
+            {
+                decimal sciSubTotal = _priceCalculationService.GetSubTotal(shoppingCartItem);
+
+                decimal taxRate;
+                decimal sciExclTax = _taxService.GetProductPrice(shoppingCartItem.Product, sciSubTotal, false, customer, out taxRate);
+                decimal sciInclTax = _taxService.GetProductPrice(shoppingCartItem.Product, sciSubTotal, true, customer, out taxRate);
+                subTotalExclTaxWithoutDiscount += sciExclTax;
+                subTotalInclTaxWithoutDiscount += sciInclTax;
+
+                //tax rates
+                decimal sciTax = sciInclTax - sciExclTax;
+                if (taxRate > decimal.Zero && sciTax > decimal.Zero)
+                {
+                    if (!taxRates.ContainsKey(taxRate))
+                    {
+                        taxRates.Add(taxRate, sciTax);
+                    }
+                    else
+                    {
+                        taxRates[taxRate] = taxRates[taxRate] + sciTax;
+                    }
+                }
+            }
+
+            //checkout attributes
+            if (customer != null)
+            {
+                var checkoutAttributesXml = customer.GetAttribute<string>(SystemCustomerAttributeNames.CheckoutAttributes, _genericAttributeService, _storeContext.CurrentStore.Id);
+                var attributeValues = _checkoutAttributeParser.ParseCheckoutAttributeValues(checkoutAttributesXml);
+                if (attributeValues != null)
+                {
+                    foreach (var attributeValue in attributeValues)
+                    {
+                        decimal taxRate;
+
+                        decimal caExclTax = _taxService.GetCheckoutAttributePrice(attributeValue, false, customer, out taxRate);
+                        decimal caInclTax = _taxService.GetCheckoutAttributePrice(attributeValue, true, customer, out taxRate);
+                        subTotalExclTaxWithoutDiscount += caExclTax;
+                        subTotalInclTaxWithoutDiscount += caInclTax;
+
+                        //tax rates
+                        decimal caTax = caInclTax - caExclTax;
+                        if (taxRate > decimal.Zero && caTax > decimal.Zero)
+                        {
+                            if (!taxRates.ContainsKey(taxRate))
+                            {
+                                taxRates.Add(taxRate, caTax);
+                            }
+                            else
+                            {
+                                taxRates[taxRate] = taxRates[taxRate] + caTax;
+                            }
+                        }
+                    }
+                }
+            }
+
+            //subtotal without discount
+            subTotalWithoutDiscount = includingTax ? subTotalInclTaxWithoutDiscount : subTotalExclTaxWithoutDiscount;
+            if (subTotalWithoutDiscount < decimal.Zero)
+                subTotalWithoutDiscount = decimal.Zero;
+
+            if (_shoppingCartSettings.RoundPricesDuringCalculation)
+                subTotalWithoutDiscount = RoundingHelper.RoundPrice(subTotalWithoutDiscount);
+
+            //We calculate discount amount on order subtotal excl tax (discount first)
+            //calculate discount amount ('Applied to order subtotal' discount)
+            decimal discountAmountExclTax = GetOrderSubtotalDiscount(customer, subTotalExclTaxWithoutDiscount, out appliedDiscount);
+            if (subTotalExclTaxWithoutDiscount < discountAmountExclTax)
+                discountAmountExclTax = subTotalExclTaxWithoutDiscount;
+            decimal discountAmountInclTax = discountAmountExclTax;
+            //subtotal with discount (excl tax)
+            decimal subTotalExclTaxWithDiscount = subTotalExclTaxWithoutDiscount - discountAmountExclTax;
+            decimal subTotalInclTaxWithDiscount = subTotalExclTaxWithDiscount;
+
+            //add tax for shopping items & checkout attributes
+            var tempTaxRates = new Dictionary<decimal, decimal>(taxRates);
+            foreach (KeyValuePair<decimal, decimal> kvp in tempTaxRates)
+            {
+                decimal taxRate = kvp.Key;
+                decimal taxValue = kvp.Value;
+
+                if (taxValue != decimal.Zero)
+                {
+                    //discount the tax amount that applies to subtotal items
+                    if (subTotalExclTaxWithoutDiscount > decimal.Zero)
+                    {
+                        decimal discountTax = taxRates[taxRate] * (discountAmountExclTax / subTotalExclTaxWithoutDiscount);
+                        discountAmountInclTax += discountTax;
+                        taxValue = taxRates[taxRate] - discountTax;
+                        if (_shoppingCartSettings.RoundPricesDuringCalculation)
+                            taxValue = RoundingHelper.RoundPrice(taxValue);
+                        taxRates[taxRate] = taxValue;
+                    }
+
+                    //subtotal with discount (incl tax)
+                    subTotalInclTaxWithDiscount += taxValue;
+                }
+            }
+
+            if (_shoppingCartSettings.RoundPricesDuringCalculation)
+            {
+                discountAmountInclTax = RoundingHelper.RoundPrice(discountAmountInclTax);
+                discountAmountExclTax = RoundingHelper.RoundPrice(discountAmountExclTax);
+            }
+
+            if (includingTax)
+            {
+                subTotalWithDiscount = subTotalInclTaxWithDiscount;
+                discountAmount = discountAmountInclTax;
+            }
+            else
+            {
+                subTotalWithDiscount = subTotalExclTaxWithDiscount;
+                discountAmount = discountAmountExclTax;
+            }
+
+            if (subTotalWithDiscount < decimal.Zero)
+                subTotalWithDiscount = decimal.Zero;
+
+            if (_shoppingCartSettings.RoundPricesDuringCalculation)
+                subTotalWithDiscount = RoundingHelper.RoundPrice(subTotalWithDiscount);
+        }
+
+        protected virtual decimal GetOrderSubtotalDiscount(Customer customer,
+            decimal orderSubTotal, out Discount appliedDiscount)
+        {
+            appliedDiscount = null;
+            decimal discountAmount = decimal.Zero;
+            if (_catalogSettings.IgnoreDiscounts)
+                return discountAmount;
+
+            var allDiscounts = _discountService.GetAllDiscounts(DiscountType.AssignedToOrderSubTotal);
+            var allowedDiscounts = new List<Discount>();
+            if (allDiscounts != null)
+                foreach (var discount in allDiscounts)
+                    if (_discountService.ValidateDiscount(discount, customer).IsValid &&
+                               discount.DiscountType == DiscountType.AssignedToOrderSubTotal &&
+                               !allowedDiscounts.ContainsDiscount(discount))
+                        allowedDiscounts.Add(discount);
+
+            appliedDiscount = allowedDiscounts.GetPreferredDiscount(orderSubTotal);
+            if (appliedDiscount != null)
+                discountAmount = appliedDiscount.GetDiscountAmount(orderSubTotal);
+
+            if (discountAmount < decimal.Zero)
+                discountAmount = decimal.Zero;
+
+            return discountAmount;
+        }
     }
 }

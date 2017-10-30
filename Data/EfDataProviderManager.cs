@@ -26,7 +26,6 @@ namespace Data
             {
                 case "sqlserver":
                     return new SqlServerDataProvider();
-                    break;
                 default:
                     throw new NopException("不支持该名称.");
             }

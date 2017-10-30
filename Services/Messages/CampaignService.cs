@@ -22,6 +22,33 @@ namespace Services.Messages
         private readonly IStoreContext _storeContext;
         private readonly IEventPublisher _eventPublisher;
 
+        /// <summary>
+        /// Ctor
+        /// </summary>
+        /// <param name="campaignRepository">Campaign repository</param>
+        /// <param name="emailSender">Email sender</param>
+        /// <param name="messageTokenProvider">Message token provider</param>
+        /// <param name="tokenizer">Tokenizer</param>
+        /// <param name="queuedEmailService">Queued email service</param>
+        /// <param name="customerService">Customer service</param>
+        /// <param name="storeContext">Store context</param>
+        /// <param name="eventPublisher">Event published</param>
+        public CampaignService(IRepository<Campaign> campaignRepository,
+            IEmailSender emailSender, IMessageTokenProvider messageTokenProvider,
+            ITokenizer tokenizer, IQueuedEmailService queuedEmailService,
+            ICustomerService customerService, IStoreContext storeContext,
+            IEventPublisher eventPublisher)
+        {
+            this._campaignRepository = campaignRepository;
+            this._emailSender = emailSender;
+            this._messageTokenProvider = messageTokenProvider;
+            this._tokenizer = tokenizer;
+            this._queuedEmailService = queuedEmailService;
+            this._storeContext = storeContext;
+            this._customerService = customerService;
+            this._eventPublisher = eventPublisher;
+        }
+
         public void DeleteCampaign(Campaign campaign)
         {
             if (campaign == null)

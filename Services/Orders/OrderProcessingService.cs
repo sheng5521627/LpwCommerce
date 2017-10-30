@@ -31,6 +31,7 @@ using System.Threading.Tasks;
 using Core.Domain.Catalog;
 using Core.Domain.Common;
 using Core.Domain.Discounts;
+using Core.Domain.Logging;
 
 namespace Services.Orders
 {
@@ -1644,147 +1645,1140 @@ namespace Services.Orders
 
         public void ProcessNextRecurringPayment(RecurringPayment recurringPayment)
         {
-            throw new NotImplementedException();
+            if (recurringPayment == null)
+                throw new ArgumentNullException("recurringPayment");
+            try
+            {
+                if (!recurringPayment.IsActive)
+                    throw new NopException("Recurring payment is not active");
+
+                var initialOrder = recurringPayment.InitialOrder;
+                if (initialOrder == null)
+                    throw new NopException("Initial order could not be loaded");
+
+                var customer = initialOrder.Customer;
+                if (customer == null)
+                    throw new NopException("Customer could not be loaded");
+
+                var nextPaymentDate = recurringPayment.NextPaymentDate;
+                if (!nextPaymentDate.HasValue)
+                    throw new NopException("Next payment date could not be calculated");
+
+                //payment info
+                var paymentInfo = new ProcessPaymentRequest
+                {
+                    StoreId = initialOrder.StoreId,
+                    CustomerId = customer.Id,
+                    OrderGuid = Guid.NewGuid(),
+                    IsRecurringPayment = true,
+                    InitialOrderId = initialOrder.Id,
+                    RecurringCycleLength = recurringPayment.CycleLength,
+                    RecurringCyclePeriod = recurringPayment.CyclePeriod,
+                    RecurringTotalCycles = recurringPayment.TotalCycles,
+                };
+
+                //place a new order
+                var result = this.PlaceOrder(paymentInfo);
+                if (result.Success)
+                {
+                    if (result.PlacedOrder == null)
+                        throw new NopException("Placed order could not be loaded");
+
+                    var rph = new RecurringPaymentHistory
+                    {
+                        RecurringPayment = recurringPayment,
+                        CreatedOnUtc = DateTime.UtcNow,
+                        OrderId = result.PlacedOrder.Id,
+                    };
+                    recurringPayment.RecurringPaymentHistory.Add(rph);
+                    _orderService.UpdateRecurringPayment(recurringPayment);
+                }
+                else
+                {
+                    string error = "";
+                    for (int i = 0; i < result.Errors.Count; i++)
+                    {
+                        error += string.Format("Error {0}: {1}", i, result.Errors[i]);
+                        if (i != result.Errors.Count - 1)
+                            error += ". ";
+                    }
+                    throw new NopException(error);
+                }
+            }
+            catch (Exception exc)
+            {
+                _logger.Error(string.Format("Error while processing recurring order. {0}", exc.Message), exc);
+                throw;
+            }
         }
 
         public IList<string> CancelRecurringPayment(RecurringPayment recurringPayment)
         {
-            throw new NotImplementedException();
+            if (recurringPayment == null)
+                throw new ArgumentNullException("recurringPayment");
+
+            var initialOrder = recurringPayment.InitialOrder;
+            if (initialOrder == null)
+                return new List<string> { "Initial order could not be loaded" };
+
+
+            var request = new CancelRecurringPaymentRequest();
+            CancelRecurringPaymentResult result = null;
+            try
+            {
+                request.Order = initialOrder;
+                result = _paymentService.CancelRecurringPayment(request);
+                if (result.Success)
+                {
+                    //update recurring payment
+                    recurringPayment.IsActive = false;
+                    _orderService.UpdateRecurringPayment(recurringPayment);
+
+
+                    //add a note
+                    initialOrder.OrderNotes.Add(new OrderNote
+                    {
+                        Note = "Recurring payment has been cancelled",
+                        DisplayToCustomer = false,
+                        CreatedOnUtc = DateTime.UtcNow
+                    });
+                    _orderService.UpdateOrder(initialOrder);
+
+                    //notify a store owner
+                    _workflowMessageService
+                        .SendRecurringPaymentCancelledStoreOwnerNotification(recurringPayment,
+                        _localizationSettings.DefaultAdminLanguageId);
+                }
+            }
+            catch (Exception exc)
+            {
+                if (result == null)
+                    result = new CancelRecurringPaymentResult();
+                result.AddError(string.Format("Error: {0}. Full exception: {1}", exc.Message, exc.ToString()));
+            }
+
+
+            //process errors
+            string error = "";
+            for (int i = 0; i < result.Errors.Count; i++)
+            {
+                error += string.Format("Error {0}: {1}", i, result.Errors[i]);
+                if (i != result.Errors.Count - 1)
+                    error += ". ";
+            }
+            if (!String.IsNullOrEmpty(error))
+            {
+                //add a note
+                initialOrder.OrderNotes.Add(new OrderNote
+                {
+                    Note = string.Format("Unable to cancel recurring payment. {0}", error),
+                    DisplayToCustomer = false,
+                    CreatedOnUtc = DateTime.UtcNow
+                });
+                _orderService.UpdateOrder(initialOrder);
+
+                //log it
+                string logError = string.Format("Error cancelling recurring payment. Order #{0}. Error: {1}", initialOrder.Id, error);
+                _logger.InsertLog(LogLevel.Error, logError, logError);
+            }
+            return result.Errors;
         }
 
         public bool CanCancelRecurringPayment(Customer customerToValidate, RecurringPayment recurringPayment)
         {
-            throw new NotImplementedException();
+            if (recurringPayment == null)
+                return false;
+
+            if (customerToValidate == null)
+                return false;
+
+            var initialOrder = recurringPayment.InitialOrder;
+            if (initialOrder == null)
+                return false;
+
+            var customer = recurringPayment.InitialOrder.Customer;
+            if (customer == null)
+                return false;
+
+            if (initialOrder.OrderStatus == OrderStatus.Cancelled)
+                return false;
+
+            if (!customerToValidate.IsAdmin())
+            {
+                if (customer.Id != customerToValidate.Id)
+                    return false;
+            }
+
+            if (!recurringPayment.NextPaymentDate.HasValue)
+                return false;
+
+            return true;
         }
 
         public void Ship(Shipment shipment, bool notifyCustomer)
         {
-            throw new NotImplementedException();
+            if (shipment == null)
+                throw new ArgumentNullException("shipment");
+
+            var order = _orderService.GetOrderById(shipment.OrderId);
+            if (order == null)
+                throw new Exception("Order cannot be loaded");
+
+            if (shipment.ShippedDateUtc.HasValue)
+                throw new Exception("This shipment is already shipped");
+
+            shipment.ShippedDateUtc = DateTime.UtcNow;
+            _shipmentService.UpdateShipment(shipment);
+
+            //process products with "Multiple warehouse" support enabled
+            foreach (var item in shipment.ShipmentItems)
+            {
+                var orderItem = _orderService.GetOrderItemById(item.OrderItemId);
+                _productService.BookReservedInventory(orderItem.Product, item.WarehouseId, -item.Quantity);
+            }
+
+            //check whether we have more items to ship
+            if (order.HasItemsToAddToShipment() || order.HasItemsToShip())
+                order.ShippingStatusId = (int)ShippingStatus.PartiallyShipped;
+            else
+                order.ShippingStatusId = (int)ShippingStatus.Shipped;
+            _orderService.UpdateOrder(order);
+
+            //add a note
+            order.OrderNotes.Add(new OrderNote
+            {
+                Note = string.Format("Shipment# {0} has been sent", shipment.Id),
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow
+            });
+            _orderService.UpdateOrder(order);
+
+            if (notifyCustomer)
+            {
+                //notify customer
+                int queuedEmailId = _workflowMessageService.SendShipmentSentCustomerNotification(shipment, order.CustomerLanguageId);
+                if (queuedEmailId > 0)
+                {
+                    order.OrderNotes.Add(new OrderNote
+                    {
+                        Note = string.Format("\"Shipped\" email (to customer) has been queued. Queued email identifier: {0}.", queuedEmailId),
+                        DisplayToCustomer = false,
+                        CreatedOnUtc = DateTime.UtcNow
+                    });
+                    _orderService.UpdateOrder(order);
+                }
+            }
+
+            //event
+            _eventPublisher.PublishShipmentSent(shipment);
+
+            //check order status
+            CheckOrderStatus(order);
         }
 
         public void Deliver(Shipment shipment, bool notifyCustomer)
         {
-            throw new NotImplementedException();
+            if (shipment == null)
+                throw new ArgumentNullException("shipment");
+
+            var order = shipment.Order;
+            if (order == null)
+                throw new Exception("Order cannot be loaded");
+
+            if (!shipment.ShippedDateUtc.HasValue)
+                throw new Exception("This shipment is not shipped yet");
+
+            if (shipment.DeliveryDateUtc.HasValue)
+                throw new Exception("This shipment is already delivered");
+
+            shipment.DeliveryDateUtc = DateTime.UtcNow;
+            _shipmentService.UpdateShipment(shipment);
+
+            if (!order.HasItemsToAddToShipment() && !order.HasItemsToShip() && !order.HasItemsToDeliver())
+                order.ShippingStatusId = (int)ShippingStatus.Delivered;
+            _orderService.UpdateOrder(order);
+
+            //add a note
+            order.OrderNotes.Add(new OrderNote
+            {
+                Note = string.Format("Shipment# {0} has been delivered", shipment.Id),
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow
+            });
+            _orderService.UpdateOrder(order);
+
+            if (notifyCustomer)
+            {
+                //send email notification
+                int queuedEmailId = _workflowMessageService.SendShipmentDeliveredCustomerNotification(shipment, order.CustomerLanguageId);
+                if (queuedEmailId > 0)
+                {
+                    order.OrderNotes.Add(new OrderNote
+                    {
+                        Note = string.Format("\"Delivered\" email (to customer) has been queued. Queued email identifier: {0}.", queuedEmailId),
+                        DisplayToCustomer = false,
+                        CreatedOnUtc = DateTime.UtcNow
+                    });
+                    _orderService.UpdateOrder(order);
+                }
+            }
+
+            //event
+            _eventPublisher.PublishShipmentDelivered(shipment);
+
+            //check order status
+            CheckOrderStatus(order);
         }
 
         public bool CanCancelOrder(Order order)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            if (order.OrderStatus == OrderStatus.Cancelled)
+                return false;
+
+            return true;
         }
 
         public void CancelOrder(Order order, bool notifyCustomer)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            if (!CanCancelOrder(order))
+                throw new NopException("Cannot do cancel for order.");
+
+            //Cancel order
+            SetOrderStatus(order, OrderStatus.Cancelled, notifyCustomer);
+
+            //add a note
+            order.OrderNotes.Add(new OrderNote
+            {
+                Note = "Order has been cancelled",
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow
+            });
+            _orderService.UpdateOrder(order);
+
+            //return (add) back redeemded reward points
+            ReturnBackRedeemedRewardPoints(order);
+
+            //cancel recurring payments
+            var recurringPayments = _orderService.SearchRecurringPayments(initialOrderId: order.Id);
+            foreach (var rp in recurringPayments)
+            {
+                var errors = CancelRecurringPayment(rp);
+                //use "errors" variable?
+            }
+
+            //Adjust inventory for already shipped shipments
+            //only products with "use multiple warehouses"
+            foreach (var shipment in order.Shipments)
+            {
+                foreach (var shipmentItem in shipment.ShipmentItems)
+                {
+                    var orderItem = _orderService.GetOrderItemById(shipmentItem.OrderItemId);
+                    if (orderItem == null)
+                        continue;
+
+                    _productService.ReverseBookedInventory(orderItem.Product, shipmentItem);
+                }
+            }
+            //Adjust inventory
+            foreach (var orderItem in order.OrderItems)
+            {
+                _productService.AdjustInventory(orderItem.Product, orderItem.Quantity, orderItem.AttributesXml);
+            }
+
+            _eventPublisher.Publish(new OrderCancelledEvent(order));
         }
 
         public bool CanMarkOrderAsAuthorized(Order order)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            if (order.OrderStatus == OrderStatus.Cancelled)
+                return false;
+
+            if (order.PaymentStatus == PaymentStatus.Pending)
+                return true;
+
+            return false;
         }
 
         public void MarkAsAuthorized(Order order)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            order.PaymentStatusId = (int)PaymentStatus.Authorized;
+            _orderService.UpdateOrder(order);
+
+            //add a note
+            order.OrderNotes.Add(new OrderNote
+            {
+                Note = "Order has been marked as authorized",
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow
+            });
+            _orderService.UpdateOrder(order);
+
+            //check order status
+            CheckOrderStatus(order);
         }
 
         public bool CanCapture(Order order)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            if (order.OrderStatus == OrderStatus.Cancelled ||
+                order.OrderStatus == OrderStatus.Pending)
+                return false;
+
+            if (order.PaymentStatus == PaymentStatus.Authorized &&
+                _paymentService.SupportCapture(order.PaymentMethodSystemName))
+                return true;
+
+            return false;
         }
 
         public IList<string> Capture(Order order)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            if (!CanCapture(order))
+                throw new NopException("Cannot do capture for order.");
+
+            var request = new CapturePaymentRequest();
+            CapturePaymentResult result = null;
+            try
+            {
+                //old info from placing order
+                request.Order = order;
+                result = _paymentService.Capture(request);
+
+                if (result.Success)
+                {
+                    var paidDate = order.PaidDateUtc;
+                    if (result.NewPaymentStatus == PaymentStatus.Paid)
+                        paidDate = DateTime.UtcNow;
+
+                    order.CaptureTransactionId = result.CaptureTransactionId;
+                    order.CaptureTransactionResult = result.CaptureTransactionResult;
+                    order.PaymentStatus = result.NewPaymentStatus;
+                    order.PaidDateUtc = paidDate;
+                    _orderService.UpdateOrder(order);
+
+                    //add a note
+                    order.OrderNotes.Add(new OrderNote
+                    {
+                        Note = "Order has been captured",
+                        DisplayToCustomer = false,
+                        CreatedOnUtc = DateTime.UtcNow
+                    });
+                    _orderService.UpdateOrder(order);
+
+                    CheckOrderStatus(order);
+
+                    if (order.PaymentStatus == PaymentStatus.Paid)
+                    {
+                        ProcessOrderPaid(order);
+                    }
+                }
+            }
+            catch (Exception exc)
+            {
+                if (result == null)
+                    result = new CapturePaymentResult();
+                result.AddError(string.Format("Error: {0}. Full exception: {1}", exc.Message, exc.ToString()));
+            }
+
+
+            //process errors
+            string error = "";
+            for (int i = 0; i < result.Errors.Count; i++)
+            {
+                error += string.Format("Error {0}: {1}", i, result.Errors[i]);
+                if (i != result.Errors.Count - 1)
+                    error += ". ";
+            }
+            if (!String.IsNullOrEmpty(error))
+            {
+                //add a note
+                order.OrderNotes.Add(new OrderNote
+                {
+                    Note = string.Format("Unable to capture order. {0}", error),
+                    DisplayToCustomer = false,
+                    CreatedOnUtc = DateTime.UtcNow
+                });
+                _orderService.UpdateOrder(order);
+
+                //log it
+                string logError = string.Format("Error capturing order #{0}. Error: {1}", order.Id, error);
+                _logger.InsertLog(LogLevel.Error, logError, logError);
+            }
+            return result.Errors;
         }
 
         public bool CanMarkOrderAsPaid(Order order)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            if (order.OrderStatus == OrderStatus.Cancelled)
+                return false;
+
+            if (order.PaymentStatus == PaymentStatus.Paid ||
+                order.PaymentStatus == PaymentStatus.Refunded ||
+                order.PaymentStatus == PaymentStatus.Voided)
+                return false;
+
+            return true;
         }
 
         public void MarkOrderAsPaid(Order order)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            if (!CanMarkOrderAsPaid(order))
+                throw new NopException("You can't mark this order as paid");
+
+            order.PaymentStatusId = (int)PaymentStatus.Paid;
+            order.PaidDateUtc = DateTime.UtcNow;
+            _orderService.UpdateOrder(order);
+
+            //add a note
+            order.OrderNotes.Add(new OrderNote
+            {
+                Note = "Order has been marked as paid",
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow
+            });
+            _orderService.UpdateOrder(order);
+
+            CheckOrderStatus(order);
+
+            if (order.PaymentStatus == PaymentStatus.Paid)
+            {
+                ProcessOrderPaid(order);
+            }
         }
 
         public bool CanRefund(Order order)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            if (order.OrderTotal == decimal.Zero)
+                return false;
+
+            //uncomment the lines below in order to allow this operation for cancelled orders
+            //if (order.OrderStatus == OrderStatus.Cancelled)
+            //    return false;
+
+            if (order.PaymentStatus == PaymentStatus.Paid &&
+                _paymentService.SupportRefund(order.PaymentMethodSystemName))
+                return true;
+
+            return false;
         }
 
         public IList<string> Refund(Order order)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            if (!CanRefund(order))
+                throw new NopException("Cannot do refund for order.");
+
+            var request = new RefundPaymentRequest();
+            RefundPaymentResult result = null;
+            try
+            {
+                request.Order = order;
+                request.AmountToRefund = order.OrderTotal;
+                request.IsPartialRefund = false;
+                result = _paymentService.Refund(request);
+                if (result.Success)
+                {
+                    //total amount refunded
+                    decimal totalAmountRefunded = order.RefundedAmount + request.AmountToRefund;
+
+                    //update order info
+                    order.RefundedAmount = totalAmountRefunded;
+                    order.PaymentStatus = result.NewPaymentStatus;
+                    _orderService.UpdateOrder(order);
+
+                    //add a note
+                    order.OrderNotes.Add(new OrderNote
+                    {
+                        Note = string.Format("Order has been refunded. Amount = {0}", request.AmountToRefund),
+                        DisplayToCustomer = false,
+                        CreatedOnUtc = DateTime.UtcNow
+                    });
+                    _orderService.UpdateOrder(order);
+
+                    //check order status
+                    CheckOrderStatus(order);
+
+                    //notifications
+                    var orderRefundedStoreOwnerNotificationQueuedEmailId = _workflowMessageService.SendOrderRefundedStoreOwnerNotification(order, request.AmountToRefund, _localizationSettings.DefaultAdminLanguageId);
+                    if (orderRefundedStoreOwnerNotificationQueuedEmailId > 0)
+                    {
+                        order.OrderNotes.Add(new OrderNote
+                        {
+                            Note = string.Format("\"Order refunded\" email (to store owner) has been queued. Queued email identifier: {0}.", orderRefundedStoreOwnerNotificationQueuedEmailId),
+                            DisplayToCustomer = false,
+                            CreatedOnUtc = DateTime.UtcNow
+                        });
+                        _orderService.UpdateOrder(order);
+                    }
+                    var orderRefundedCustomerNotificationQueuedEmailId = _workflowMessageService.SendOrderRefundedCustomerNotification(order, request.AmountToRefund, order.CustomerLanguageId);
+                    if (orderRefundedCustomerNotificationQueuedEmailId > 0)
+                    {
+                        order.OrderNotes.Add(new OrderNote
+                        {
+                            Note = string.Format("\"Order refunded\" email (to customer) has been queued. Queued email identifier: {0}.", orderRefundedCustomerNotificationQueuedEmailId),
+                            DisplayToCustomer = false,
+                            CreatedOnUtc = DateTime.UtcNow
+                        });
+                        _orderService.UpdateOrder(order);
+                    }
+
+                    //raise event       
+                    _eventPublisher.Publish(new OrderRefundedEvent(order, request.AmountToRefund));
+                }
+
+            }
+            catch (Exception exc)
+            {
+                if (result == null)
+                    result = new RefundPaymentResult();
+                result.AddError(string.Format("Error: {0}. Full exception: {1}", exc.Message, exc.ToString()));
+            }
+
+            //process errors
+            string error = "";
+            for (int i = 0; i < result.Errors.Count; i++)
+            {
+                error += string.Format("Error {0}: {1}", i, result.Errors[i]);
+                if (i != result.Errors.Count - 1)
+                    error += ". ";
+            }
+            if (!String.IsNullOrEmpty(error))
+            {
+                //add a note
+                order.OrderNotes.Add(new OrderNote
+                {
+                    Note = string.Format("Unable to refund order. {0}", error),
+                    DisplayToCustomer = false,
+                    CreatedOnUtc = DateTime.UtcNow
+                });
+                _orderService.UpdateOrder(order);
+
+                //log it
+                string logError = string.Format("Error refunding order #{0}. Error: {1}", order.Id, error);
+                _logger.InsertLog(LogLevel.Error, logError, logError);
+            }
+            return result.Errors;
         }
 
         public bool CanRefundOffline(Order order)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            if (order.OrderTotal == decimal.Zero)
+                return false;
+
+            //uncomment the lines below in order to allow this operation for cancelled orders
+            //if (order.OrderStatus == OrderStatus.Cancelled)
+            //     return false;
+
+            if (order.PaymentStatus == PaymentStatus.Paid)
+                return true;
+
+            return false;
         }
 
         public void RefundOffline(Order order)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            if (!CanRefundOffline(order))
+                throw new NopException("You can't refund this order");
+
+            //amout to refund
+            decimal amountToRefund = order.OrderTotal;
+
+            //total amount refunded
+            decimal totalAmountRefunded = order.RefundedAmount + amountToRefund;
+
+            //update order info
+            order.RefundedAmount = totalAmountRefunded;
+            order.PaymentStatus = PaymentStatus.Refunded;
+            _orderService.UpdateOrder(order);
+
+            //add a note
+            order.OrderNotes.Add(new OrderNote
+            {
+                Note = string.Format("Order has been marked as refunded. Amount = {0}", amountToRefund),
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow
+            });
+            _orderService.UpdateOrder(order);
+
+            //check order status
+            CheckOrderStatus(order);
+
+            //notifications
+            var orderRefundedStoreOwnerNotificationQueuedEmailId = _workflowMessageService.SendOrderRefundedStoreOwnerNotification(order, amountToRefund, _localizationSettings.DefaultAdminLanguageId);
+            if (orderRefundedStoreOwnerNotificationQueuedEmailId > 0)
+            {
+                order.OrderNotes.Add(new OrderNote
+                {
+                    Note = string.Format("\"Order refunded\" email (to store owner) has been queued. Queued email identifier: {0}.", orderRefundedStoreOwnerNotificationQueuedEmailId),
+                    DisplayToCustomer = false,
+                    CreatedOnUtc = DateTime.UtcNow
+                });
+                _orderService.UpdateOrder(order);
+            }
+            var orderRefundedCustomerNotificationQueuedEmailId = _workflowMessageService.SendOrderRefundedCustomerNotification(order, amountToRefund, order.CustomerLanguageId);
+            if (orderRefundedCustomerNotificationQueuedEmailId > 0)
+            {
+                order.OrderNotes.Add(new OrderNote
+                {
+                    Note = string.Format("\"Order refunded\" email (to customer) has been queued. Queued email identifier: {0}.", orderRefundedCustomerNotificationQueuedEmailId),
+                    DisplayToCustomer = false,
+                    CreatedOnUtc = DateTime.UtcNow
+                });
+                _orderService.UpdateOrder(order);
+            }
+
+            //raise event       
+            _eventPublisher.Publish(new OrderRefundedEvent(order, amountToRefund));
         }
 
         public bool CanPartiallyRefund(Order order, decimal amountToRefund)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            if (order.OrderTotal == decimal.Zero)
+                return false;
+
+            //uncomment the lines below in order to allow this operation for cancelled orders
+            //if (order.OrderStatus == OrderStatus.Cancelled)
+            //    return false;
+
+            decimal canBeRefunded = order.OrderTotal - order.RefundedAmount;
+            if (canBeRefunded <= decimal.Zero)
+                return false;
+
+            if (amountToRefund > canBeRefunded)
+                return false;
+
+            if ((order.PaymentStatus == PaymentStatus.Paid ||
+                order.PaymentStatus == PaymentStatus.PartiallyRefunded) &&
+                _paymentService.SupportPartiallyRefund(order.PaymentMethodSystemName))
+                return true;
+
+            return false;
         }
 
         public IList<string> PartiallyRefund(Order order, decimal amountToRefund)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            if (!CanPartiallyRefund(order, amountToRefund))
+                throw new NopException("Cannot do partial refund for order.");
+
+            var request = new RefundPaymentRequest();
+            RefundPaymentResult result = null;
+            try
+            {
+                request.Order = order;
+                request.AmountToRefund = amountToRefund;
+                request.IsPartialRefund = true;
+
+                result = _paymentService.Refund(request);
+
+                if (result.Success)
+                {
+                    //total amount refunded
+                    decimal totalAmountRefunded = order.RefundedAmount + amountToRefund;
+
+                    //update order info
+                    order.RefundedAmount = totalAmountRefunded;
+                    order.PaymentStatus = result.NewPaymentStatus;
+                    _orderService.UpdateOrder(order);
+
+
+                    //add a note
+                    order.OrderNotes.Add(new OrderNote
+                    {
+                        Note = string.Format("Order has been partially refunded. Amount = {0}", amountToRefund),
+                        DisplayToCustomer = false,
+                        CreatedOnUtc = DateTime.UtcNow
+                    });
+                    _orderService.UpdateOrder(order);
+
+                    //check order status
+                    CheckOrderStatus(order);
+
+                    //notifications
+                    var orderRefundedStoreOwnerNotificationQueuedEmailId = _workflowMessageService.SendOrderRefundedStoreOwnerNotification(order, amountToRefund, _localizationSettings.DefaultAdminLanguageId);
+                    if (orderRefundedStoreOwnerNotificationQueuedEmailId > 0)
+                    {
+                        order.OrderNotes.Add(new OrderNote
+                        {
+                            Note = string.Format("\"Order refunded\" email (to store owner) has been queued. Queued email identifier: {0}.", orderRefundedStoreOwnerNotificationQueuedEmailId),
+                            DisplayToCustomer = false,
+                            CreatedOnUtc = DateTime.UtcNow
+                        });
+                        _orderService.UpdateOrder(order);
+                    }
+                    var orderRefundedCustomerNotificationQueuedEmailId = _workflowMessageService.SendOrderRefundedCustomerNotification(order, amountToRefund, order.CustomerLanguageId);
+                    if (orderRefundedCustomerNotificationQueuedEmailId > 0)
+                    {
+                        order.OrderNotes.Add(new OrderNote
+                        {
+                            Note = string.Format("\"Order refunded\" email (to customer) has been queued. Queued email identifier: {0}.", orderRefundedCustomerNotificationQueuedEmailId),
+                            DisplayToCustomer = false,
+                            CreatedOnUtc = DateTime.UtcNow
+                        });
+                        _orderService.UpdateOrder(order);
+                    }
+
+                    //raise event       
+                    _eventPublisher.Publish(new OrderRefundedEvent(order, amountToRefund));
+                }
+            }
+            catch (Exception exc)
+            {
+                if (result == null)
+                    result = new RefundPaymentResult();
+                result.AddError(string.Format("Error: {0}. Full exception: {1}", exc.Message, exc.ToString()));
+            }
+
+            //process errors
+            string error = "";
+            for (int i = 0; i < result.Errors.Count; i++)
+            {
+                error += string.Format("Error {0}: {1}", i, result.Errors[i]);
+                if (i != result.Errors.Count - 1)
+                    error += ". ";
+            }
+            if (!String.IsNullOrEmpty(error))
+            {
+                //add a note
+                order.OrderNotes.Add(new OrderNote
+                {
+                    Note = string.Format("Unable to partially refund order. {0}", error),
+                    DisplayToCustomer = false,
+                    CreatedOnUtc = DateTime.UtcNow
+                });
+                _orderService.UpdateOrder(order);
+
+                //log it
+                string logError = string.Format("Error refunding order #{0}. Error: {1}", order.Id, error);
+                _logger.InsertLog(LogLevel.Error, logError, logError);
+            }
+            return result.Errors;
         }
 
         public bool CanPartiallyRefundOffline(Order order, decimal amountToRefund)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            if (order.OrderTotal == decimal.Zero)
+                return false;
+
+            //uncomment the lines below in order to allow this operation for cancelled orders
+            //if (order.OrderStatus == OrderStatus.Cancelled)
+            //    return false;
+
+            decimal canBeRefunded = order.OrderTotal - order.RefundedAmount;
+            if (canBeRefunded <= decimal.Zero)
+                return false;
+
+            if (amountToRefund > canBeRefunded)
+                return false;
+
+            if (order.PaymentStatus == PaymentStatus.Paid ||
+                order.PaymentStatus == PaymentStatus.PartiallyRefunded)
+                return true;
+
+            return false;
         }
 
         public void PartiallyRefundOffline(Order order, decimal amountToRefund)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            if (!CanPartiallyRefundOffline(order, amountToRefund))
+                throw new NopException("You can't partially refund (offline) this order");
+
+            //total amount refunded
+            decimal totalAmountRefunded = order.RefundedAmount + amountToRefund;
+
+            //update order info
+            order.RefundedAmount = totalAmountRefunded;
+            //if (order.OrderTotal == totalAmountRefunded), then set order.PaymentStatus = PaymentStatus.Refunded;
+            order.PaymentStatus = PaymentStatus.PartiallyRefunded;
+            _orderService.UpdateOrder(order);
+
+            //add a note
+            order.OrderNotes.Add(new OrderNote
+            {
+                Note = string.Format("Order has been marked as partially refunded. Amount = {0}", amountToRefund),
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow
+            });
+            _orderService.UpdateOrder(order);
+
+            //check order status
+            CheckOrderStatus(order);
+
+            //notifications
+            var orderRefundedStoreOwnerNotificationQueuedEmailId = _workflowMessageService.SendOrderRefundedStoreOwnerNotification(order, amountToRefund, _localizationSettings.DefaultAdminLanguageId);
+            if (orderRefundedStoreOwnerNotificationQueuedEmailId > 0)
+            {
+                order.OrderNotes.Add(new OrderNote
+                {
+                    Note = string.Format("\"Order refunded\" email (to store owner) has been queued. Queued email identifier: {0}.", orderRefundedStoreOwnerNotificationQueuedEmailId),
+                    DisplayToCustomer = false,
+                    CreatedOnUtc = DateTime.UtcNow
+                });
+                _orderService.UpdateOrder(order);
+            }
+            var orderRefundedCustomerNotificationQueuedEmailId = _workflowMessageService.SendOrderRefundedCustomerNotification(order, amountToRefund, order.CustomerLanguageId);
+            if (orderRefundedCustomerNotificationQueuedEmailId > 0)
+            {
+                order.OrderNotes.Add(new OrderNote
+                {
+                    Note = string.Format("\"Order refunded\" email (to customer) has been queued. Queued email identifier: {0}.", orderRefundedCustomerNotificationQueuedEmailId),
+                    DisplayToCustomer = false,
+                    CreatedOnUtc = DateTime.UtcNow
+                });
+                _orderService.UpdateOrder(order);
+            }
+            //raise event       
+            _eventPublisher.Publish(new OrderRefundedEvent(order, amountToRefund));
         }
 
         public bool CanVoid(Order order)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            if (order.OrderTotal == decimal.Zero)
+                return false;
+
+            //uncomment the lines below in order to allow this operation for cancelled orders
+            //if (order.OrderStatus == OrderStatus.Cancelled)
+            //    return false;
+
+            if (order.PaymentStatus == PaymentStatus.Authorized &&
+                _paymentService.SupportVoid(order.PaymentMethodSystemName))
+                return true;
+
+            return false;
         }
 
         public IList<string> Void(Order order)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            if (!CanVoid(order))
+                throw new NopException("Cannot do void for order.");
+
+            var request = new VoidPaymentRequest();
+            VoidPaymentResult result = null;
+            try
+            {
+                request.Order = order;
+                result = _paymentService.Void(request);
+
+                if (result.Success)
+                {
+                    //update order info
+                    order.PaymentStatus = result.NewPaymentStatus;
+                    _orderService.UpdateOrder(order);
+
+                    //add a note
+                    order.OrderNotes.Add(new OrderNote
+                    {
+                        Note = "Order has been voided",
+                        DisplayToCustomer = false,
+                        CreatedOnUtc = DateTime.UtcNow
+                    });
+                    _orderService.UpdateOrder(order);
+
+                    //check order status
+                    CheckOrderStatus(order);
+                }
+            }
+            catch (Exception exc)
+            {
+                if (result == null)
+                    result = new VoidPaymentResult();
+                result.AddError(string.Format("Error: {0}. Full exception: {1}", exc.Message, exc.ToString()));
+            }
+
+            //process errors
+            string error = "";
+            for (int i = 0; i < result.Errors.Count; i++)
+            {
+                error += string.Format("Error {0}: {1}", i, result.Errors[i]);
+                if (i != result.Errors.Count - 1)
+                    error += ". ";
+            }
+            if (!String.IsNullOrEmpty(error))
+            {
+                //add a note
+                order.OrderNotes.Add(new OrderNote
+                {
+                    Note = string.Format("Unable to voiding order. {0}", error),
+                    DisplayToCustomer = false,
+                    CreatedOnUtc = DateTime.UtcNow
+                });
+                _orderService.UpdateOrder(order);
+
+                //log it
+                string logError = string.Format("Error voiding order #{0}. Error: {1}", order.Id, error);
+                _logger.InsertLog(LogLevel.Error, logError, logError);
+            }
+            return result.Errors;
         }
 
         public bool CanVoidOffline(Order order)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            if (order.OrderTotal == decimal.Zero)
+                return false;
+
+            //uncomment the lines below in order to allow this operation for cancelled orders
+            //if (order.OrderStatus == OrderStatus.Cancelled)
+            //    return false;
+
+            if (order.PaymentStatus == PaymentStatus.Authorized)
+                return true;
+
+            return false;
         }
 
         public void VoidOffline(Order order)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            if (!CanVoidOffline(order))
+                throw new NopException("You can't void this order");
+
+            order.PaymentStatusId = (int)PaymentStatus.Voided;
+            _orderService.UpdateOrder(order);
+
+            //add a note
+            order.OrderNotes.Add(new OrderNote
+            {
+                Note = "Order has been marked as voided",
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow
+            });
+            _orderService.UpdateOrder(order);
+
+            //check orer status
+            CheckOrderStatus(order);
         }
 
         public void ReOrder(Order order)
         {
-            throw new NotImplementedException();
+            if (order == null)
+                throw new ArgumentNullException("order");
+
+            //move shopping cart items (if possible)
+            foreach (var orderItem in order.OrderItems)
+            {
+                _shoppingCartService.AddToCart(order.Customer, orderItem.Product,
+                    ShoppingCartType.ShoppingCart, order.StoreId,
+                    orderItem.AttributesXml, orderItem.UnitPriceExclTax,
+                    orderItem.RentalStartDateUtc, orderItem.RentalEndDateUtc,
+                    orderItem.Quantity, false);
+            }
+
+            //set checkout attributes
+            //comment the code below if you want to disable this functionality
+            _genericAttributeService.SaveAttribute(order.Customer, SystemCustomerAttributeNames.CheckoutAttributes, order.CheckoutAttributesXml, order.StoreId);
         }
 
         public bool IsReturnRequestAllowed(Order order)
         {
-            throw new NotImplementedException();
+            if (!_orderSettings.ReturnRequestsEnabled)
+                return false;
+
+            if (order == null || order.Deleted)
+                return false;
+
+            if (order.OrderStatus != OrderStatus.Complete)
+                return false;
+
+            if (_orderSettings.NumberOfDaysReturnRequestAvailable == 0)
+                return true;
+
+            var daysPassed = (DateTime.UtcNow - order.CreatedOnUtc).TotalDays;
+            return (daysPassed - _orderSettings.NumberOfDaysReturnRequestAvailable) < 0;
         }
 
         public bool ValidateMinOrderSubtotalAmount(IList<ShoppingCartItem> cart)
         {
-            throw new NotImplementedException();
+            if (cart == null)
+                throw new ArgumentNullException("cart");
+
+            //min order amount sub-total validation
+            if (cart.Count > 0 && _orderSettings.MinOrderSubtotalAmount > decimal.Zero)
+            {
+                //subtotal
+                decimal orderSubTotalDiscountAmountBase;
+                Discount orderSubTotalAppliedDiscount;
+                decimal subTotalWithoutDiscountBase;
+                decimal subTotalWithDiscountBase;
+                _orderTotalCalculationService.GetShoppingCartSubTotal(cart, _orderSettings.MinOrderSubtotalAmountIncludingTax,
+                    out orderSubTotalDiscountAmountBase, out orderSubTotalAppliedDiscount,
+                    out subTotalWithoutDiscountBase, out subTotalWithDiscountBase);
+
+                if (subTotalWithoutDiscountBase < _orderSettings.MinOrderSubtotalAmount)
+                    return false;
+            }
+
+            return true;
         }
 
         public bool ValidateMinOrderTotalAmount(IList<ShoppingCartItem> cart)
         {
-            throw new NotImplementedException();
+            if (cart == null)
+                throw new ArgumentNullException("cart");
+
+            if (cart.Count > 0 && _orderSettings.MinOrderTotalAmount > decimal.Zero)
+            {
+                decimal? shoppingCartTotalBase = _orderTotalCalculationService.GetShoppingCartTotal(cart);
+                if (shoppingCartTotalBase.HasValue && shoppingCartTotalBase.Value < _orderSettings.MinOrderTotalAmount)
+                    return false;
+            }
+
+            return true;
         }
     }
 }

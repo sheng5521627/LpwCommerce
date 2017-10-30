@@ -1,4 +1,6 @@
-﻿using ImageResizer;
+﻿using FluentValidation;
+using FluentValidation.Results;
+using ImageResizer;
 using MaxMind.GeoIP2;
 using MaxMind.GeoIP2.Responses;
 using System;
@@ -15,28 +17,41 @@ namespace DllTest
     {
         static void Main(string[] args)
         {
-            List<List<int>> list1 = new List<List<int>>();
-            List<int> list2 = new List<int>() {1, 2, 3, 4};
+            Student student = new Student() { Name = "111111",Age = 9 };
 
-            for (int counter = 0; counter < (1 << list2.Count); ++counter)
+            StudentValidator validator = new StudentValidator();
+            ValidationResult result = validator.Validate(student);
+            if (result.IsValid)
             {
-                var combination = new List<int>();
-                for (int i = 0; i < list2.Count; ++i)
-                {
-                    if ((counter & (1 << i)) == 0)
-                    {
-                        combination.Add(list2[i]);
-                    }
-                }
-                list1.Add(combination);
+                Console.WriteLine("验证成功");
             }
-            foreach (var item in list1)
+            else
             {
-                Console.WriteLine(string.Join(",", item));
+                Console.WriteLine("验证失败");
+                foreach (var item in result.Errors)
+                {
+                    Console.WriteLine(item.ErrorMessage);
+                }
             }
 
             Console.ReadLine();
 
+        }
+    }
+
+    public class Student
+    {
+        public string Name { get; set; }
+
+        public int Age { get; set; }
+    }
+    
+    public class StudentValidator : AbstractValidator<Student>
+    {
+        public StudentValidator()
+        {
+            RuleFor(s => s.Name).NotEmpty().MinimumLength(5).MaximumLength(10).WithName("字符串不能为空，长度为5-10个字");
+            RuleFor(s => s.Age).NotEmpty().LessThanOrEqualTo(10).GreaterThanOrEqualTo(8).WithName("年龄范围：8-10");
         }
     }
 }
