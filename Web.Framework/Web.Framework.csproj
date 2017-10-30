@@ -61,6 +61,10 @@
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Linq.Dynamic, Version=1.0.6132.35681, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Linq.Dynamic.1.0.7\lib\net40\System.Linq.Dynamic.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.ServiceModel" />
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Helpers, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -95,10 +99,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CheckAffiliateAttribute.cs" />
+    <Compile Include="CustomerLastActivityAttribute.cs" />
     <Compile Include="DependendencyRegistrar.cs" />
+    <Compile Include="Events\AdminTabStripCreated.cs" />
+    <Compile Include="Events\ProductSearchEvent.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="HtmlExtensions.cs" />
     <Compile Include="Kendoui\DataSourceRequest.cs" />
+    <Compile Include="Kendoui\DataSourceResult.cs" />
+    <Compile Include="Kendoui\Filter.cs" />
+    <Compile Include="Kendoui\ModelStateExtensions.cs" />
+    <Compile Include="Kendoui\QueryableExtensions.cs" />
+    <Compile Include="Kendoui\Sort.cs" />
     <Compile Include="LanguageSeoCodeAttribute.cs" />
     <Compile Include="Localization\ILocalizedModel.cs" />
     <Compile Include="Localization\ILocalizedModelLocal.cs" />
@@ -107,6 +120,11 @@
     <Compile Include="Localization\LocalizedString.cs" />
     <Compile Include="Localization\LocalizedUrlExtenstions.cs" />
     <Compile Include="Localization\Localizer.cs" />
+    <Compile Include="Menu\Extensions.cs" />
+    <Compile Include="Menu\IAdminMenuPlugin.cs" />
+    <Compile Include="Menu\SiteMapNode.cs" />
+    <Compile Include="Menu\XmlSiteMap.cs" />
+    <Compile Include="Mvc\ActionConfirmationModel.cs" />
     <Compile Include="Mvc\BaseNopModel.cs" />
     <Compile Include="Mvc\CommaSeparatedModelBinder.cs" />
     <Compile Include="Mvc\DeleteConfirmationModel.cs" />
@@ -115,6 +133,10 @@
     <Compile Include="Mvc\NopMetadataProvider.cs" />
     <Compile Include="Mvc\NopModelBinder.cs" />
     <Compile Include="Mvc\NullJsonResult.cs" />
+    <Compile Include="Mvc\Routes\GuidConstraint.cs" />
+    <Compile Include="Mvc\Routes\IRouteProvider.cs" />
+    <Compile Include="Mvc\Routes\IRoutePublisher.cs" />
+    <Compile Include="Mvc\Routes\RoutePublisher.cs" />
     <Compile Include="Mvc\XmlDownloadResult.cs" />
     <Compile Include="NopResourceDisplayName.cs" />
     <Compile Include="NopValidatorFactory.cs" />

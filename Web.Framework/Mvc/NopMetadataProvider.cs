@@ -21,7 +21,7 @@ namespace Web.Framework.Mvc
             var additionalValues = attributes.OfType<IModelAttribute>();
             foreach(var additionalValue in additionalValues)
             {
-                if (metadata.AdditionalValues.ContainsKey(additionalValue))
+                if (metadata.AdditionalValues.ContainsKey(additionalValue.Name))
                     throw new NopException("There is already an attribute with the name of \"" + additionalValue.Name +
                                            "\" on this model.");
 

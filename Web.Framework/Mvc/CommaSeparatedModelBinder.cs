@@ -41,7 +41,7 @@ namespace Web.Framework.Mvc
                         {
                             if (!string.IsNullOrWhiteSpace(splitValue))
                             {
-                                list.Add(Convert.ChangeType(splitValue, valueType);
+                                list.Add(Convert.ChangeType(splitValue, valueType));
                             }
                         }
                         if (type.IsArray)

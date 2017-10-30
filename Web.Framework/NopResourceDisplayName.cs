@@ -16,19 +16,19 @@ namespace Web.Framework
     {
         private string _resourceValue = string.Empty;
 
-        public string ResoureKey { get; set; }
+        public string ResourceKey { get; set; }
 
         public NopResourceDisplayName(string resourceKey)
             : base(resourceKey)
         {
-            ResoureKey = resourceKey;
+            ResourceKey = resourceKey;
         }
         public override string DisplayName
         {
             get
             {
                 var languageId = EngineContext.Current.Resolve<IWorkContext>().WorkingLanguage.Id;
-                _resourceValue = EngineContext.Current.Resolve<ILocalizationService>().GetResource(ResoureKey, languageId, true, ResoureKey);
+                _resourceValue = EngineContext.Current.Resolve<ILocalizationService>().GetResource(ResourceKey, languageId, true, ResourceKey);
                 return _resourceValue;
             }
         }

@@ -125,7 +125,8 @@ namespace Web.Framework
 
         public class SettingsSource : IRegistrationSource
         {
-            static readonly MethodInfo BuildMethod = typeof(SettingsSource).GetMethod("BuildRegistration", BindingFlags.NonPublic | BindingFlags.Static);
+            static readonly MethodInfo BuildMethod = 
+                typeof(SettingsSource).GetMethod("BuildRegistration", BindingFlags.NonPublic | BindingFlags.Static);
             public bool IsAdapterForIndividualComponents
             {
                 get
@@ -134,7 +135,9 @@ namespace Web.Framework
                 }
             }
 
-            public IEnumerable<IComponentRegistration> RegistrationsFor(Service service, Func<Service, IEnumerable<IComponentRegistration>> registrationAccessor)
+            public IEnumerable<IComponentRegistration> RegistrationsFor(
+                Service service, 
+                Func<Service, IEnumerable<IComponentRegistration>> registrationAccessor)
             {
                 var ts = service as TypedService;
                 if (ts != null && typeof(ISettings).IsAssignableFrom(ts.ServiceType))
