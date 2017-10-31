@@ -12,6 +12,8 @@ using Web.Framework.Mvc.Routes;
 using Web.Framework.Themes;
 using FluentValidation.Mvc;
 using Services.Tasks;
+using StackExchange.Profiling;
+using StackExchange.Profiling.Mvc;
 
 namespace WebSite
 {
@@ -59,6 +61,24 @@ namespace WebSite
             {
                 TaskManager.Instance.Initialze();
                 TaskManager.Instance.Start();
+            }
+
+            GlobalFilters.Filters.Add(new ProfilingActionFilter());
+        }
+
+        protected void Application_BeginRequest(object sender, EventArgs e)
+        {
+            MiniProfiler.Start();
+            HttpContext.Current.Items["nop.MiniProfilerStarted"] = true;
+        }
+
+        protected void Application_EndRequest(object sender, EventArgs e)
+        {
+            var miniProfilerStarted = HttpContext.Current.Items.Contains("Application_EndRequest")
+                                      && Convert.ToBoolean(HttpContext.Current.Items["Application_EndRequest"]);
+            if (miniProfilerStarted)
+            {
+                MiniProfiler.Stop();
             }
         }
     }
