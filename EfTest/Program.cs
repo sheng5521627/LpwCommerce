@@ -39,7 +39,7 @@ namespace EfTest
         public int Aid { get; set; }
         public int Age { get; set; }
     }
-
+    
     public class MyDbInitialize : IDatabaseInitializer<MyDbContext>
     {
         public void InitializeDatabase(MyDbContext context)

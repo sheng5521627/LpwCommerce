@@ -21,6 +21,8 @@ using Autofac.Builder;
 using Services.Configuration;
 using System.Reflection;
 using Services.Stores;
+using Web.Framework.Mvc.Routes;
+using Services.Tasks;
 
 namespace Web.Framework
 {
@@ -59,6 +61,8 @@ namespace Web.Framework
             builder.Register(c => dataProviderSettings).As<DataSettings>();
             builder.Register(c => new EfDataProviderManager(c.Resolve<DataSettings>())).As<BaseDataProviderManager>().InstancePerDependency();
 
+            builder.Register(c => c.Resolve<BaseDataProviderManager>().LoadDataProvider()).As<IDataProvider>().InstancePerDependency();
+
             if (dataProviderSettings != null && dataProviderSettings.IsValid())
             {
                 var efDataProviderManager = new EfDataProviderManager(dataProviderSettings);
@@ -77,6 +81,12 @@ namespace Web.Framework
 
             //controller
             builder.RegisterControllers(typeFinder.GetAssemblies().ToArray());
+
+            //route
+            builder.RegisterType<RoutePublisher>().As<IRoutePublisher>().SingleInstance();
+
+            //task
+            builder.RegisterType<ScheduleTaskService>().As<IScheduleTaskService>().InstancePerLifetimeScope();
 
             #region 缓存依赖注入
 
@@ -125,7 +135,7 @@ namespace Web.Framework
 
         public class SettingsSource : IRegistrationSource
         {
-            static readonly MethodInfo BuildMethod = 
+            static readonly MethodInfo BuildMethod =
                 typeof(SettingsSource).GetMethod("BuildRegistration", BindingFlags.NonPublic | BindingFlags.Static);
             public bool IsAdapterForIndividualComponents
             {
@@ -136,7 +146,7 @@ namespace Web.Framework
             }
 
             public IEnumerable<IComponentRegistration> RegistrationsFor(
-                Service service, 
+                Service service,
                 Func<Service, IEnumerable<IComponentRegistration>> registrationAccessor)
             {
                 var ts = service as TypedService;

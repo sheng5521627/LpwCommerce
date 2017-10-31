@@ -56,13 +56,13 @@ namespace Core.Data
                 switch (key)
                 {
                     case "DataProvider":
-                        shellSettings.DataProvider = value;
+                        shellSettings.DataProvider = value.Trim();
                         break;
                     case "DataConnectionString":
-                        shellSettings.DataConnectionString = value;
+                        shellSettings.DataConnectionString = value.Trim();
                         break;
                     default:
-                        shellSettings.RawDataSettings.Add(key, value);
+                        shellSettings.RawDataSettings.Add(key, value.Trim());
                         break;
                 }
             }

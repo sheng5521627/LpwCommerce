@@ -33,6 +33,24 @@ namespace Core.Infrastructure
         public void Initialize(NopConfig config)
         {
             RegisterDependencies(config);
+
+            if (!config.IgnoreStartupTasks)
+            {
+                RunStartupTasks();
+            }
+        }
+
+        protected virtual void RunStartupTasks()
+        {
+            var typeFinder = _containerManager.Resolve<ITypeFinder>();
+            var startUpTaskTypes = typeFinder.FindClassesOfType<IStartupTask>();
+            var startUpTasks = new List<IStartupTask>();
+            foreach (var startUpTaskType in startUpTaskTypes)
+                startUpTasks.Add((IStartupTask)Activator.CreateInstance(startUpTaskType));
+
+            startUpTasks = startUpTasks.AsQueryable().OrderBy(m => m.Order).ToList();
+            foreach (var startUpTask in startUpTasks)
+                startUpTask.Execute();
         }
 
         /// <summary>

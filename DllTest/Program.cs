@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 using FluentValidation.Results;
+using FluentValidation.Validators;
 using ImageResizer;
 using MaxMind.GeoIP2;
 using MaxMind.GeoIP2.Responses;
@@ -17,7 +18,7 @@ namespace DllTest
     {
         static void Main(string[] args)
         {
-            Student student = new Student() { Name = "111111",Age = 9 };
+            Student student = new Student() { Name = "1",Age = 9 };
 
             StudentValidator validator = new StudentValidator();
             ValidationResult result = validator.Validate(student);
@@ -50,8 +51,38 @@ namespace DllTest
     {
         public StudentValidator()
         {
-            RuleFor(s => s.Name).NotEmpty().MinimumLength(5).MaximumLength(10).WithName("字符串不能为空，长度为5-10个字");
-            RuleFor(s => s.Age).NotEmpty().LessThanOrEqualTo(10).GreaterThanOrEqualTo(8).WithName("年龄范围：8-10");
+            RuleFor(s => s.Name).IsCreditCard();
+        }
+    }
+
+    public class MyPropertyValidator : PropertyValidator
+    {
+        public MyPropertyValidator()
+            : base("长度为2-10个字符")
+        {
+
+        }
+
+        protected override bool IsValid(PropertyValidatorContext context)
+        {
+            string value = context.PropertyValue as string;
+            if (!string.IsNullOrEmpty(value))
+            {
+                if (value.Length < 2 || value.Length > 10)
+                {
+                    return false;
+                }
+                return true;
+            }
+            return false;
+        }
+    }
+
+    public static class MyValidatorExtensions
+    {
+        public static IRuleBuilderOptions<T, string> IsCreditCard<T>(this IRuleBuilder<T, string> ruleBuilder)
+        {
+            return ruleBuilder.SetValidator(new MyPropertyValidator());
         }
     }
 }
