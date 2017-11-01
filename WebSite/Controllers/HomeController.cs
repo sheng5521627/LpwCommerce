@@ -1,5 +1,7 @@
 ﻿using FluentValidation;
 using FluentValidation.Attributes;
+using Services.Stores;
+using StackExchange.Profiling;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -13,9 +15,19 @@ namespace WebSite.Controllers
 {
     public class HomeController : Controller
     {
-        // GET: Home
+        public HomeController(IStoreService storeService)
+        {
+
+        }
+        
         public ActionResult Index(Student model)
         {
+            var data = this.ControllerContext.RouteData;
+            var profiler = MiniProfiler.Current;
+            using (profiler.Step("性能检测"))
+            {
+                ViewBag.Title = "Home Page";
+            }
             TypeConverter t = TypeDescriptor.GetConverter(typeof(List<int>));
             if (ModelState.IsValid)
             {

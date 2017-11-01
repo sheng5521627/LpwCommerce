@@ -401,9 +401,10 @@ namespace Web.Framework
                 }
                 if (detectedLanguage != null)
                 {
-                    if (this.CurrentCustomer.GetAttribute<int>(SystemCustomerAttributeNames.LanguageAutomaticallyDetected, _storeContext.CurrentStore.Id) != detectedLanguage.Id)
+                    //the language is detected. now we need to save it
+                    if (this.CurrentCustomer.GetAttribute<int>(SystemCustomerAttributeNames.LanguageId, _storeContext.CurrentStore.Id) != detectedLanguage.Id)
                     {
-                        _genericAttributeService.SaveAttribute(this.CurrentCustomer, SystemCustomerAttributeNames.LanguageAutomaticallyDetected, detectedLanguage.Id, _storeContext.CurrentStore.Id);
+                        _genericAttributeService.SaveAttribute(this.CurrentCustomer, SystemCustomerAttributeNames.LanguageId, detectedLanguage.Id, _storeContext.CurrentStore.Id);
                     }
                 }
 

@@ -12,15 +12,8 @@ namespace EfTest
     {
         static void Main(string[] args)
         {
-            List<int> list1 = new List<int>() { 1, 2, 3, 4, 5 };
-            List<string> list2 = new List<string>() { "a", "b", "c" };
-            var query = from a in list1
-                        from b in list2
-                        select new { a, b };
-            foreach(var item in query.ToList())
-            {
-
-            }
+            MyDbContext dbContext = new MyDbContext();
+            bool exists =  dbContext.Database.Exists();
                         
 
             Console.ReadLine();
@@ -50,26 +43,13 @@ namespace EfTest
     public class MyDbContext : DbContext
     {
         public MyDbContext()
-            : base(nameOrConnectionString: "Data Source=.;Initial Catalog=MyTest;Integrated Security=True;")
+            : base(nameOrConnectionString: "Data Source=(local);Initial Catalog=nop;Integrated Security=True")
         {
             this.Configuration.LazyLoadingEnabled = true;
         }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
-
-            modelBuilder.Entity<Person>().HasKey(m => m.Id).ToTable("Person").HasOptional(m => m.Address).WithOptionalPrincipal(m => m.Person).Map(m => m.MapKey("PersonId"));
-            modelBuilder.Entity<Address>().ToTable("Address").HasKey(m => m.Id);
-
-            modelBuilder.Entity<Customer>()
-                .HasKey(m => m.Id).ToTable("Customer")
-                .HasMany(m => m.CustomerRoles)
-                .WithMany().Map(m => m.ToTable("customer_roles"));
-            modelBuilder.Entity<CustomerRole>().HasKey(m => m.Id).ToTable("CustomerRole").HasMany(m => m.Customers).WithMany(m => m.CustomerRoles);
-
-            modelBuilder.Entity<History>().ToTable("History").HasKey(m => m.Id).HasRequired(m => m.Customer).WithMany().HasForeignKey(m => m.CustomerId);
-
-
             base.OnModelCreating(modelBuilder);
         }
         public DbSet<Customer> Customers { get; set; }

@@ -57,6 +57,7 @@ namespace Web.Framework.Localization
 
         public override RouteData GetRouteData(HttpContextBase httpContext)
         {
+            var temp = this;
             if(DataSettingsHelper.DatabaseIsInstalled() && this.SeoFriendlyUrlsForLanguagesEnabled)
             {
                 string virtualPath = httpContext.Request.AppRelativeCurrentExecutionFilePath;
@@ -80,7 +81,8 @@ namespace Web.Framework.Localization
                     httpContext.RewritePath(newVirtualPath);
                 }
             }
-            return base.GetRouteData(httpContext);
+            var routeData = base.GetRouteData(httpContext);
+            return routeData;
         }
 
         public override VirtualPathData GetVirtualPath(RequestContext requestContext, RouteValueDictionary values)

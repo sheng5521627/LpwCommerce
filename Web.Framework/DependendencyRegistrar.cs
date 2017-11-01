@@ -23,6 +23,15 @@ using System.Reflection;
 using Services.Stores;
 using Web.Framework.Mvc.Routes;
 using Services.Tasks;
+using Web.Framework.Themes;
+using Services.Common;
+using Services.Logging;
+using Services.Customers;
+using Services.Vendors;
+using Services.Authentication;
+using Services.Localization;
+using Services.Directory;
+using Core.Plugins;
 
 namespace Web.Framework
 {
@@ -53,6 +62,9 @@ namespace Web.Framework
 
             //store context
             builder.RegisterType<WebStoreContext>().As<IStoreContext>().InstancePerLifetimeScope();
+
+            //work context
+            builder.RegisterType<WebWorkContext>().As<IWorkContext>().InstancePerLifetimeScope();
 
             #region 数据层的依赖注入
 
@@ -87,6 +99,10 @@ namespace Web.Framework
 
             //task
             builder.RegisterType<ScheduleTaskService>().As<IScheduleTaskService>().InstancePerLifetimeScope();
+
+            //Theme
+            builder.RegisterType<ThemeProvider>().As<IThemeProvider>().InstancePerLifetimeScope();
+            builder.RegisterType<ThemeContext>().As<IThemeContext>().InstancePerLifetimeScope();
 
             #region 缓存依赖注入
 
@@ -125,10 +141,26 @@ namespace Web.Framework
 
             #endregion
 
+            //Plugin
+            builder.RegisterType<PluginFinder>().As<IPluginFinder>().InstancePerLifetimeScope();
+
             #region 注册服务
+
+            //Localization
+            builder.RegisterType<LocalizationService>().As<ILocalizationService>().WithParameter(ResolvedParameter.ForNamed<ICacheManager>("nop_cache_static")).InstancePerLifetimeScope();
+
+            builder.RegisterType<DefaultLogger>().As<ILogger>().InstancePerLifetimeScope();
 
             builder.RegisterType<StoreService>().As<IStoreService>().InstancePerLifetimeScope();
             builder.RegisterType<StoreMappingService>().As<IStoreMappingService>().WithParameter(ResolvedParameter.ForNamed<ICacheManager>("nop_cache_static")).InstancePerLifetimeScope();
+
+            builder.RegisterType<GenericAttributeService>().As<IGenericAttributeService>().InstancePerLifetimeScope();
+
+            builder.RegisterType<CustomerService>().As<ICustomerService>().InstancePerLifetimeScope();
+            builder.RegisterType<VendorService>().As<IVendorService>().InstancePerLifetimeScope();
+            builder.RegisterType<FormsAuthenticationService>().As<IAuthenticationService>().InstancePerLifetimeScope();
+            builder.RegisterType<LanguageService>().As<ILanguageService>().InstancePerLifetimeScope();
+            builder.RegisterType<CurrencyService>().As<ICurrencyService>().InstancePerLifetimeScope();
 
             #endregion
         }

@@ -22,14 +22,17 @@ namespace Web.Framework.Themes
 
         private void LoadConfiguration()
         {
-            foreach(var themeName in Directory.GetDirectories(_basePath))
+            if (Directory.Exists(_basePath))
             {
-                var configuration = CreateThemeConfiguration(themeName);
-                if(configuration != null)
+                foreach (var themeName in Directory.GetDirectories(_basePath))
                 {
-                    _themeConfigurations.Add(configuration);
+                    var configuration = CreateThemeConfiguration(themeName);
+                    if (configuration != null)
+                    {
+                        _themeConfigurations.Add(configuration);
+                    }
                 }
-            }
+            }            
         }
 
         private ThemeConfiguration CreateThemeConfiguration(string themePath)
