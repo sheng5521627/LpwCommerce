@@ -34,11 +34,11 @@ namespace WebSite.Infrastructure
                             new { controller = "Widget", action = "WidgetsByZone" },
                             new[] { "WebSite.Controllers.Controllers" });
 
-            ////page not found
+            //page not found
             routes.MapLocalizedRoute("PageNotFound",
                             "page-not-found",
                             new { controller = "Common", action = "PageNotFound" },
-                            new[] { "WebSite.Controllers.Controllers" });          
+                            new[] { "WebSite.Controllers.Controllers" });
         }
     }
 }

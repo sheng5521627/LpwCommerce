@@ -175,6 +175,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="App_Data\InstalledPlugins.txt" />
     <Content Include="App_Data\Settings2.txt" />
     <Content Include="App_Data\Settings.txt" />
     <Content Include="Global.asax" />
@@ -231,12 +232,20 @@
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Controllers\BasePublicController.cs" />
     <Compile Include="Controllers\CommonController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
+    <Compile Include="Controllers\WidgetController.cs" />
+    <Compile Include="Extensions\AttributeParserHelper.cs" />
+    <Compile Include="Extensions\ControllerExtensions.cs" />
+    <Compile Include="Extensions\HtmlExtensions.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Infrastructure\Cache\ModelCacheEventConsumer.cs" />
     <Compile Include="Infrastructure\RouteProvider.cs" />
+    <Compile Include="Models\Cms\RenderWidgetModel.cs" />
+    <Compile Include="Models\Common\PagerModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -246,6 +255,9 @@
     <Content Include="Themes\DefaultClean\Views\Shared\Head.cshtml" />
     <Content Include="Themes\DefaultClean\Views\Web.config" />
     <Content Include="Themes\DefaultClean\theme.config" />
+    <Content Include="Views\Widget\WidgetsByZone.cshtml" />
+    <Content Include="Views\Shared\Header.cshtml" />
+    <Content Include="Views\Shared\_Layout.cshtml" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>
@@ -255,7 +267,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Start\" />
-    <Folder Include="Models\" />
+    <Folder Include="Views\BasePublic\" />
     <Folder Include="Views\Common\" />
   </ItemGroup>
   <ItemGroup>

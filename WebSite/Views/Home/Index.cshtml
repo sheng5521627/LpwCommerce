@@ -1,22 +1,18 @@
 ﻿@using StackExchange.Profiling
 
 @{
-    Layout = null;
+    Layout = "_Layout";
+    ViewBag.Title = "首页";
 }
 
-<!DOCTYPE html>
+@MiniProfiler.RenderIncludes()
+@Html.Action("WidgetsByZone", "Widget", new { widgetZone = "home_page_top", additionalData = new { Name = "蓝平旺" } })
 
-<html>
-<head>
-    <meta name="viewport" content="width=device-width" />
-    <title>Index</title>
-    
-</head>
-<body>
-    @MiniProfiler.RenderIncludes()
-    <div> 
-        首页
-        @GetSelectedTabIndex()
-    </div>
-</body>
-</html>
+@section one
+{
+    <div>第一个节点</div>
+}
+@section two
+{
+    <div>第二个节点</div>
+}

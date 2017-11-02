@@ -7,11 +7,7 @@ using System.Threading.Tasks;
 
 namespace ConsoleTest.Events
 {
-    public class EntityAdd : IConsumer<Student>
+    public class EntityAdd 
     {
-        public void HandleEvent(Student eventMessage)
-        {
-            Console.WriteLine("事件发生");
-        }
     }
 }

@@ -32,6 +32,9 @@ using Services.Authentication;
 using Services.Localization;
 using Services.Directory;
 using Core.Plugins;
+using Services.Security;
+using Services.Cms;
+using Services.Media;
 
 namespace Web.Framework
 {
@@ -143,8 +146,13 @@ namespace Web.Framework
 
             //Plugin
             builder.RegisterType<PluginFinder>().As<IPluginFinder>().InstancePerLifetimeScope();
+            builder.RegisterType<WidgetService>().As<IWidgetService>().InstancePerLifetimeScope();
 
             #region 注册服务
+            builder.RegisterType<PermissionService>().As<IPermissionService>().InstancePerLifetimeScope();
+
+            //picture
+            builder.RegisterType<PictureService>().As<IPictureService>().InstancePerLifetimeScope();
 
             //Localization
             builder.RegisterType<LocalizationService>().As<ILocalizationService>().WithParameter(ResolvedParameter.ForNamed<ICacheManager>("nop_cache_static")).InstancePerLifetimeScope();

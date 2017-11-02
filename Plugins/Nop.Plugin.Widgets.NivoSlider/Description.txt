@@ -1,0 +1,8 @@
+﻿Group:Widgets
+FriendlyName:Nivo Slider
+SystemName:Widgets.NivoSlider
+Version:1.09
+SupportedVersions:3.70
+Author:蓝平旺
+DisplayOrder:1
+FileName:Lpw.Plugins.Widgets.NivoSlider.dll

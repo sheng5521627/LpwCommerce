@@ -143,7 +143,7 @@ namespace WebSite
             }
         }
 
-        protected void Application_AuthenticateRequest(object sender, EventArgs e)
+        protected void Application_AuthenticateRequest1(object sender, EventArgs e)
         {
             //we don't do it in Application_BeginRequest because a user is not authenticated yet
             SetWorkingCulture();

@@ -125,7 +125,7 @@ namespace Core.Plugins
                             //get list of all DLLs in plugins (not in bin!)
                             var pluginFiles = descriptionFile.Directory.GetFiles("*.dll", SearchOption.AllDirectories)
                                 .Where(x => !binFiles.Select(q => q.FullName).Contains(x.FullName))
-                                .Where(x => IsPackagePluginFoler(x.Directory));
+                                .Where(x => IsPackagePluginFoler(x.Directory)).ToList();
 
                             var mainPluginFile = pluginFiles.FirstOrDefault(x => x.Name.Equals(pluginDescriptor.PluginFileName, StringComparison.InvariantCultureIgnoreCase));
                             pluginDescriptor.OriginalAssemblyFile = mainPluginFile;

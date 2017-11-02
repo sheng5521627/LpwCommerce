@@ -31,59 +31,31 @@ namespace ConsoleTest
     {
         static void Main(string[] args)
         {
-            //RemotePost q = new RemotePost();
-            //EngineContext.Initialize(false);
-            using (var context = new MyDbContext())
+           var list =   typeof(B).GetCustomAttributes(true);
+
+            foreach(var item in list)
             {
-                var school = context.Schools.FirstOrDefault();
+                Console.WriteLine(item);
             }
 
-                Console.ReadLine();
-        }
-    }
-    public class MyDbContext : DbContext
-    {
-        public MyDbContext()
-            : base(nameOrConnectionString: "Data Source=.;Initial Catalog=MyFirst;Integrated Security=True")
-        {
-
-        }
-
-        protected override void OnModelCreating(DbModelBuilder modelBuilder)
-        {
-            modelBuilder.Entity<School>().HasKey(m => m.Id).ToTable("School");
-            modelBuilder.Entity<Student>().HasKey(m => m.Id).ToTable("Student").HasRequired(m => m.School).WithMany(m => m.Students).HasForeignKey(m => m.SchoolId);
-
-            base.OnModelCreating(modelBuilder);
-        }
-
-        public DbSet<School> Schools { get; set; }
-        public DbSet<Student> Students { get; set; }
-    }
-
-    public class School
-    {
-        private ICollection<Student> _students;
-
-        public int Id { get; set; }
-
-        public string Name { get; set; }
-
-        public virtual ICollection<Student> Students
-        {
-            get { return _students??(_students=new List<Student>()); }
-            set { _students = value; }
+            Console.ReadLine();
         }
     }
 
-    public class Student
+    [AttributeUsage(AttributeTargets.Class,Inherited =true)]
+    public class MyAttribute : Attribute
     {
-        public int Id { get; set; }
 
-        public string Name { get; set; }
+    }
 
-        public int SchoolId { get; set; }
+    [My]
+    public class A
+    {
 
-        public virtual School School { get; set; }
+    }
+
+    public class B : A
+    {
+
     }
 }
