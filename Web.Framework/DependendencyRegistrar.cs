@@ -35,6 +35,7 @@ using Core.Plugins;
 using Services.Security;
 using Services.Cms;
 using Services.Media;
+using Web.Framework.UI;
 
 namespace Web.Framework
 {
@@ -153,6 +154,8 @@ namespace Web.Framework
 
             //picture
             builder.RegisterType<PictureService>().As<IPictureService>().InstancePerLifetimeScope();
+
+            builder.RegisterType<PageHeadBuilder>().As<IPageHeadBuilder>().InstancePerLifetimeScope();
 
             //Localization
             builder.RegisterType<LocalizationService>().As<ILocalizationService>().WithParameter(ResolvedParameter.ForNamed<ICacheManager>("nop_cache_static")).InstancePerLifetimeScope();
