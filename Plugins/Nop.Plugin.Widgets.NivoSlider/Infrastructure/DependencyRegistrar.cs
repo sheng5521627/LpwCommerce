@@ -23,7 +23,7 @@ namespace Lpw.Plugin.Widgets.NivoSlider.Infrastructure
         }
 
         public void Register(ContainerBuilder builder, ITypeFinder typeFinder, NopConfig config)
-        {
+        {           
             builder.RegisterType<WidgetsNivoSliderController>().WithParameter(ResolvedParameter.ForNamed<ICacheManager>("nop_cache_static"));
         }
     }
