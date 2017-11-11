@@ -34,6 +34,23 @@ namespace WebSite.Infrastructure
                             new { controller = "Widget", action = "WidgetsByZone" },
                             new[] { "WebSite.Controllers" });
 
+            //login
+            routes.MapLocalizedRoute("Login",
+                            "login/",
+                            new { controller = "Customer", action = "Login" },
+                            new[] { "WebSite.Controllers" });
+
+            //register
+            routes.MapLocalizedRoute("Register",
+                            "register/",
+                            new { controller = "Customer", action = "Register" },
+                            new[] { "WebSite.Controllers" });
+            //logout
+            routes.MapLocalizedRoute("Logout",
+                            "logout/",
+                            new { controller = "Customer", action = "Logout" },
+                            new[] { "WebSite.Controllers" });
+
             //page not found
             routes.MapLocalizedRoute("PageNotFound",
                             "page-not-found",

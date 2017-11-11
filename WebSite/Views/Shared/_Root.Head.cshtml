@@ -38,10 +38,11 @@
     {
         @MiniProfiler.RenderIncludes();
     }
+    @Html.Action("Favicon", "Common")
 </head>
 <body>
     @RenderBody()
     @Html.NopCssFiles(this.Url, ResourceLocation.Foot)
     @Html.NopScripts(this.Url, ResourceLocation.Foot)
-    </body>
+</body>
 </html>

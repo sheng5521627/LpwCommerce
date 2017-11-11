@@ -475,7 +475,7 @@ namespace WebSite.Controllers
             return View(model);
         }
 
-        [HttpPost,ActionName("ContactUs")]
+        [HttpPost, ActionName("ContactUs")]
         [PublicAntiForgery]
         [CaptchaValidator]
         [StoreClosed]
@@ -532,7 +532,7 @@ namespace WebSite.Controllers
                 });
 
                 model.SuccessfullySent = true;
-                model.Result= _localizationService.GetResource("ContactUs.YourEnquiryHasBeenSent");
+                model.Result = _localizationService.GetResource("ContactUs.YourEnquiryHasBeenSent");
 
                 _customerActivityService.InsertActivity("PublicStore.ContactUs", _localizationService.GetResource("ActivityLog.PublicStore.ContactUs"));
 
@@ -552,7 +552,7 @@ namespace WebSite.Controllers
             }
 
             var vendor = _vendorService.GetVendorById(vendorId);
-            if(vendor == null || !vendor.Active || vendor.Deleted)
+            if (vendor == null || !vendor.Active || vendor.Deleted)
             {
                 return RedirectToRoute("HomePage");
             }
@@ -569,10 +569,10 @@ namespace WebSite.Controllers
             return View(model);
         }
 
-        [HttpPost,ActionName("ContactVendor")]
+        [HttpPost, ActionName("ContactVendor")]
         [PublicAntiForgery]
         [CaptchaValidator]
-        public ActionResult ContactVendorSend(ContactVendorModel model,bool captchaValid)
+        public ActionResult ContactVendorSend(ContactVendorModel model, bool captchaValid)
         {
             if (!_vendorSettings.AllowCustomersToContactVendors)
                 return RedirectToRoute("HomePage");
@@ -654,7 +654,7 @@ namespace WebSite.Controllers
                 return RedirectToRoute("HomePage");
 
             string cacheKey = string.Format(ModelCacheEventConsumer.SITEMAP_PAGE_MODEL_KEY,
-                _workContext.WorkingLanguage.Id, string.Join(",", _workContext.CurrentCustomer.GetCustomerRoleIds(), _storeContext.CurrentStore.Id));
+                _workContext.WorkingLanguage.Id, string.Join(",", _workContext.CurrentCustomer.GetCustomerRoleIds()), _storeContext.CurrentStore.Id);
             var cachedModel = _cacheManager.Get(cacheKey, () =>
             {
                 var model = new SitemapModel()
@@ -727,7 +727,7 @@ namespace WebSite.Controllers
             var siteMap = _cacheManager.Get(cacheKey, () => _sitemapGenerator.Generate(this.Url));
             return Content(siteMap, "text/xml");
         }
-        
+
         [ChildActionOnly]
         public ActionResult StoreThemeSelector()
         {

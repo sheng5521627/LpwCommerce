@@ -28,7 +28,7 @@ namespace Services.Catalog
             foreach (var cat in source.Where(m => m.ParentCategoryId == parentId).ToList())
             {
                 result.Add(cat);
-                result.AddRange(SortCategoriesForTress(source, cat.ParentCategoryId, true));
+                result.AddRange(SortCategoriesForTress(source, cat.Id, true));
             }
             if (!ignoreCategoriesWithoutExistingParent && result.Count != source.Count)
             {
