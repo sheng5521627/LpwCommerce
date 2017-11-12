@@ -101,6 +101,12 @@ namespace WebSite.Infrastructure
                             "storeclosed",
                             new { controller = "Common", action = "StoreClosed" },
                             new[] { "Nop.Web.Controllers" });
+
+            //install
+            routes.MapRoute("Installation",
+                "install",
+                new { controller = "Install", action = "Index" },
+                new[] { "WebSite.Controllers" });
         }
     }
 }

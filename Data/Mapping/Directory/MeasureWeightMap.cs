@@ -11,7 +11,7 @@ namespace Data.Mapping.Directory
     {
         public MeasureWeightMap()
         {
-            this.ToTable("MeasureWeightMap");
+            this.ToTable("MeasureWeight");
             this.HasKey(m => m.Id);
             this.Property(m => m.Name).IsRequired().HasMaxLength(100);
             this.Property(m => m.SystemKeyword).IsRequired().HasMaxLength(100);

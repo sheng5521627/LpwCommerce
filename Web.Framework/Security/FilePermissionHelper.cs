@@ -186,5 +186,20 @@ namespace Web.Framework.Security
             filesToCheck.Add(Path.Combine(rootDir, "App_Data\\Settings.txt"));
             return filesToCheck;
         }
+
+        /// <summary>
+        /// Gets a list of files (physical paths) which require write permission
+        /// </summary>
+        /// <returns>Result</returns>
+        public static IEnumerable<string> GetFilesWrite()
+        {
+            string rootDir = CommonHelper.MapPath("~/");
+            var filesToCheck = new List<string>();
+            filesToCheck.Add(Path.Combine(rootDir, "Global.asax"));
+            filesToCheck.Add(Path.Combine(rootDir, "web.config"));
+            filesToCheck.Add(Path.Combine(rootDir, "App_Data\\InstalledPlugins.txt"));
+            filesToCheck.Add(Path.Combine(rootDir, "App_Data\\Settings.txt"));
+            return filesToCheck;
+        }
     }
 }

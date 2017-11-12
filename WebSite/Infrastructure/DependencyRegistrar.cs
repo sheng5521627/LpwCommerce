@@ -9,6 +9,7 @@ using Core.Infrastructure;
 using WebSite.Controllers;
 using Autofac.Core;
 using Core.Caching;
+using WebSite.Infrastructure.Installation;
 
 namespace WebSite.Infrastructure
 {
@@ -24,6 +25,7 @@ namespace WebSite.Infrastructure
 
         public void Register(ContainerBuilder builder, ITypeFinder typeFinder, NopConfig config)
         {
+            builder.RegisterType<InstallationLocalizationService>().As<IInstallationLocalizationService>().InstancePerLifetimeScope();
             builder.RegisterType<WidgetController>().WithParameter(ResolvedParameter.ForNamed<ICacheManager>("nop_cache_static"));
         }
     }

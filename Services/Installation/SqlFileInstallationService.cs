@@ -123,7 +123,7 @@ namespace Services.Installation
 
         public void InstallData(string defaultUserEmail, string defaultUserPassword, bool installSampleData = true)
         {
-            ExecuteSqlFile(_webHelper.MapPath("~/App_Data/Install/create_required_data.sql"));
+            ExecuteSqlFile(_webHelper.MapPath("~/App_Data/Install/Fast/create_required_data.sql"));
             InstallLocaleResources();
             UpdateDefaultCustomer(defaultUserEmail, defaultUserPassword);
             UpdateDefaultStoreUrl();

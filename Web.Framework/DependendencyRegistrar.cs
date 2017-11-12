@@ -91,7 +91,7 @@ namespace Web.Framework
 
             var dataSettingsManager = new DataSettingsManager();
             var dataProviderSettings = dataSettingsManager.LoadSettings();
-            builder.Register(c => dataProviderSettings).As<DataSettings>();
+            builder.Register(c => dataSettingsManager.LoadSettings()).As<DataSettings>();
             builder.Register(c => new EfDataProviderManager(c.Resolve<DataSettings>())).As<BaseDataProviderManager>().InstancePerDependency();
 
             builder.Register(c => c.Resolve<BaseDataProviderManager>().LoadDataProvider()).As<IDataProvider>().InstancePerDependency();

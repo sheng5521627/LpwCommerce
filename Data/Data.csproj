@@ -149,6 +149,7 @@
     <Compile Include="Mapping\Security\PermissionRecordMap.cs" />
     <Compile Include="Mapping\Seo\UrlRecordMap.cs" />
     <Compile Include="Mapping\Shipping\DeliveryDateMap.cs" />
+    <Compile Include="Mapping\Shipping\ProductAvailabilityRangeMap.cs" />
     <Compile Include="Mapping\Shipping\ShipmentItemMap.cs" />
     <Compile Include="Mapping\Shipping\ShipmentMap.cs" />
     <Compile Include="Mapping\Shipping\ShippingMethodMap.cs" />
