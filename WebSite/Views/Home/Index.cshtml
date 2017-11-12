@@ -1,18 +1,8 @@
-﻿@using StackExchange.Profiling
-
-@{
-    Layout = "_Layout";
-    ViewBag.Title = "首页";
+﻿@{
+    Layout = "~/Views/Shared/_ColumnsOne.cshtml";
 }
-
-@MiniProfiler.RenderIncludes()
-@Html.Action("WidgetsByZone", "Widget", new { widgetZone = "home_page_top", additionalData = new { Name = "蓝平旺" } })
-
-@section one
-{
-    <div>第一个节点</div>
-}
-@section two
-{
-    <div>第二个节点</div>
-}
+<div class="page home-page">
+    <div class="page-body">
+        @*@Html.Widget("home_page_top")*@
+    </div>
+</div>

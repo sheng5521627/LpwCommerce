@@ -87,6 +87,7 @@ namespace Web.Framework.Localization
 
         public override VirtualPathData GetVirtualPath(RequestContext requestContext, RouteValueDictionary values)
         {
+            var list = RouteTable.Routes;
             VirtualPathData data = base.GetVirtualPath(requestContext, values);
 
             if (data != null && DataSettingsHelper.DatabaseIsInstalled() && this.SeoFriendlyUrlsForLanguagesEnabled)

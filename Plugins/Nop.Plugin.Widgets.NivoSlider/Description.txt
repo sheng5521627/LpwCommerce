@@ -5,4 +5,4 @@ Version:1.09
 SupportedVersions:3.70
 Author:蓝平旺
 DisplayOrder:1
-FileName:Lpw.Plugins.Widgets.NivoSlider.dll
+FileName:Lpw.Plugin.Widgets.NivoSlider.dll

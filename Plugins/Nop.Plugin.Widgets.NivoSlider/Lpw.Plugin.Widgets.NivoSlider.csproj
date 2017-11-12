@@ -124,8 +124,35 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Description.txt" />
+    <Content Include="Content\nivoslider\license.txt" />
+    <Content Include="Content\nivoslider\nivo-slider.css" />
+    <Content Include="Content\nivoslider\sample-images\banner1.jpg" />
+    <Content Include="Content\nivoslider\sample-images\banner2.jpg" />
+    <Content Include="Content\nivoslider\themes\bar\arrows.png" />
+    <Content Include="Content\nivoslider\themes\bar\bar.css" />
+    <Content Include="Content\nivoslider\themes\bar\bullets.png" />
+    <Content Include="Content\nivoslider\themes\bar\loading.gif" />
+    <Content Include="Content\nivoslider\themes\custom\arrows.png" />
+    <Content Include="Content\nivoslider\themes\custom\bullets.png" />
+    <Content Include="Content\nivoslider\themes\custom\custom.css" />
+    <Content Include="Content\nivoslider\themes\custom\loading.gif" />
+    <Content Include="Content\nivoslider\themes\dark\arrows.png" />
+    <Content Include="Content\nivoslider\themes\dark\bullets.png" />
+    <Content Include="Content\nivoslider\themes\dark\dark.css" />
+    <Content Include="Content\nivoslider\themes\dark\loading.gif" />
+    <Content Include="Content\nivoslider\themes\default\arrows.png" />
+    <Content Include="Content\nivoslider\themes\default\bullets.png" />
+    <Content Include="Content\nivoslider\themes\default\default.css" />
+    <Content Include="Content\nivoslider\themes\default\loading.gif" />
+    <Content Include="Content\nivoslider\themes\light\arrows.png" />
+    <Content Include="Content\nivoslider\themes\light\bullets.png" />
+    <Content Include="Content\nivoslider\themes\light\light.css" />
+    <Content Include="Content\nivoslider\themes\light\loading.gif" />
+    <Content Include="Description.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Global.asax" />
+    <Content Include="Scripts\jquery.nivo.slider.js" />
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
@@ -136,6 +163,7 @@
     </Compile>
     <Compile Include="Infrastructure\Cache\ModelCacheEventConsumer.cs" />
     <Compile Include="Infrastructure\DependencyRegistrar.cs" />
+    <Compile Include="Models\PublicInfoModel.cs" />
     <Compile Include="NivoSliderPlugin.cs" />
     <Compile Include="NivoSliderSettings.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -143,6 +171,9 @@
   <ItemGroup>
     <Content Include="Views\web.config" />
     <Content Include="packages.config" />
+    <Content Include="ApplicationInsights.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Views\WidgetsNivoSlider\Index.cshtml" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
@@ -153,7 +184,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
-    <Folder Include="Models\" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Core.csproj">
@@ -205,6 +235,13 @@
     <Error Condition="!Exists('..\..\packages\Microsoft.Net.Compilers.1.0.0\build\Microsoft.Net.Compilers.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Microsoft.Net.Compilers.1.0.0\build\Microsoft.Net.Compilers.props'))" />
     <Error Condition="!Exists('..\..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.1.0.0\build\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.1.0.0\build\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.props'))" />
   </Target>
+  <PropertyGroup>
+    <PostBuildEvent>xcopy /e /y /d $(ProjectDir)Views E:\LpwCommerceLearn\LpwCommerce\WebSite\Plugins\Widgets.NivoSlider\Views\
+copy $(ProjectDir)\Description.txt E:\LpwCommerceLearn\LpwCommerce\WebSite\Plugins\Widgets.NivoSlider
+copy $(TargetPath) E:\LpwCommerceLearn\LpwCommerce\WebSite\Plugins\Widgets.NivoSlider
+xcopy /e /y /d $(ProjectDir)Content E:\LpwCommerceLearn\LpwCommerce\WebSite\Plugins\Widgets.NivoSlider\Content\
+xcopy /e /y /d $(ProjectDir)Scripts E:\LpwCommerceLearn\LpwCommerce\WebSite\Plugins\Widgets.NivoSlider\Scripts\</PostBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

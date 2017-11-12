@@ -18,7 +18,7 @@ namespace Web.Framework
             if (type != null)
             {
                 var attibute = (ValidatorAttribute)Attribute.GetCustomAttribute(type, typeof(ValidatorAttribute));
-                if(attibute !=null && attibute.ValidatorType != null)
+                if (attibute != null && attibute.ValidatorType != null)
                 {
                     var instance = EngineContext.Current.ContainerManager.ResolveUnregistered(attibute.ValidatorType);
                     return instance as IValidator;

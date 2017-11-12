@@ -3,5 +3,5 @@
 
 @foreach (var widget in Model)
 {
-    Html.Action(widget.ActionName, widget.ControllerName, widget.RouteValues);
+    @Html.Action(widget.ActionName, widget.ControllerName, widget.RouteValues);
 }

@@ -7,6 +7,8 @@ using Core.Configuration;
 using Core.Infrastructure;
 using Autofac;
 using Lpw.Plugin.Widgets.NivoSlider.Controllers;
+using Autofac.Core;
+using Core.Caching;
 
 namespace Lpw.Plugin.Widgets.NivoSlider.Infrastructure
 {
@@ -21,8 +23,8 @@ namespace Lpw.Plugin.Widgets.NivoSlider.Infrastructure
         }
 
         public void Register(ContainerBuilder builder, ITypeFinder typeFinder, NopConfig config)
-        {
-            builder.RegisterType<WidgetsNivoSliderController>();
+        {           
+            builder.RegisterType<WidgetsNivoSliderController>().WithParameter(ResolvedParameter.ForNamed<ICacheManager>("nop_cache_static"));
         }
     }
 }

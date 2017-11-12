@@ -174,7 +174,7 @@ namespace Core.Plugins
                 catch (Exception ex)
                 {
                     var msg = string.Empty;
-                    for (var e = ex; e != null; e = ex.InnerException)
+                    for (var e = ex; e != null; e = e.InnerException)
                         msg += e.Message + Environment.NewLine;
                     var fail = new Exception(msg, ex);
                     throw fail;

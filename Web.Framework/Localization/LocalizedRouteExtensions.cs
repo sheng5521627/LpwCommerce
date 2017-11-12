@@ -54,7 +54,7 @@ namespace Web.Framework.Localization
                 route.DataTokens["Namespaces"] = namespaces;
             }
 
-            routes.Add(route);
+            routes.Add(name, route);
             return route;
         }
 
